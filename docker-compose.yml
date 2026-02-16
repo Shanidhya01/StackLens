@@ -1,0 +1,32 @@
+version: "3.9"
+
+services:
+  gateway:
+    build: ./gateway
+    ports:
+      - "5000:5000"
+    depends_on:
+      - crawler
+      - detection
+      - performance
+      - report
+
+  crawler:
+    build: ./services/crawler-service
+    ports:
+      - "5001:5001"
+
+  detection:
+    build: ./services/detection-service
+    ports:
+      - "5002:5002"
+
+  performance:
+    build: ./services/performance-service
+    ports:
+      - "5003:5003"
+
+  report:
+    build: ./services/report-service
+    ports:
+      - "5004:5004"
