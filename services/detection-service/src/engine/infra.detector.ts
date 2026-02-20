@@ -1,4 +1,8 @@
-export const detectHosting = (headers: any = {}) => {
+import { HostingResult } from "../types/detection.types";
+
+export const detectHosting = (
+  headers: Record<string, string> = {}
+): HostingResult => {
   const serverHeader = (headers.server || "").toLowerCase();
 
   if (headers["x-vercel-id"]) {

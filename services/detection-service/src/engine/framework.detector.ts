@@ -1,4 +1,8 @@
-export const detectFramework = (scripts: string[] = []) => {
+import { FrameworkResult } from "../types/detection.types";
+
+export const detectFramework = (
+  scripts: string[] = []
+): FrameworkResult => {
   const scriptString = scripts.join(" ").toLowerCase();
 
   if (scriptString.includes("_next")) {

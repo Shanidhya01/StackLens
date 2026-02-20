@@ -1,8 +1,8 @@
 import { Router } from "express";
-import {crawHandler} from "../controllers/crawl.controller";
+import { crawlHandler } from "../controllers/crawl.controller";
 
 const router = Router();
 
-router.post("/", crawHandler);
+router.post("/", crawlHandler);
 
 export default router;

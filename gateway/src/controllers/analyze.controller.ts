@@ -9,26 +9,30 @@ export const analyzeHandler = async (req: any, res: any) => {
 
   try {
     // Step 1: Call Crawler
-    const crawlResponse = await axios.post(
-      "http://crawler:5001/crawl",
-      { url }
-    );
+    const crawlResponse = await axios.post("http://crawler:5001/crawl", {
+      url,
+    });
 
     // Step 2: Call Detection
     const detectResponse = await axios.post(
       "http://detection:5002/detect",
-      crawlResponse.data
+      crawlResponse.data,
+    );
+
+    const performanceResponse = await axios.post(
+      "http://performance:5003/analyze-performance",
+      crawlResponse.data,
     );
 
     res.json({
       message: "Analysis successful",
-      detection: detectResponse.data
+      detection: detectResponse.data,
+      performance: performanceResponse.data,
     });
-
   } catch (error: any) {
     res.status(500).json({
       error: "Analysis failed",
-      details: error.message
+      details: error.message,
     });
   }
 };
