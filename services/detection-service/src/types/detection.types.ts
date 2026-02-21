@@ -37,3 +37,20 @@ export interface DetectionResponse {
   rendering: string;
   confidence: number;
 }
+
+
+export interface CrawlInput {
+  headers: Record<string, string>;
+  scripts: string[];
+  meta?: string[];
+  htmlSize?: number;
+
+  uiPatterns?: {
+    hasNavbar: boolean;
+    hasFooter: boolean;
+    hasHeroSection: boolean;
+    formCount: number;
+    buttonCount: number;
+    isSPA: boolean;
+  };
+}

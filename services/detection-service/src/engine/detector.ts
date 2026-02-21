@@ -26,9 +26,15 @@ export const detectFromSignals = (signals: Signals) => {
     hosting = "GitHub Infrastructure";
   }
 
+  const rendering =
+    signals.frameworkSignals.hasNextData
+      ? "Hybrid SSR"
+      : "Likely CSR";
+
   return {
     framework,
     hosting,
+    rendering,
     confidence
   };
 };

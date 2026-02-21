@@ -1,4 +1,5 @@
 import axios from "axios";
+import { Scan } from "../models/scan.model";   // 🔥 ADD THIS
 
 export const analyzeHandler = async (req: any, res: any) => {
   const { url } = req.body;
@@ -8,29 +9,50 @@ export const analyzeHandler = async (req: any, res: any) => {
   }
 
   try {
-    // Step 1: Call Crawler
+    // Step 1: Crawl
     const crawlResponse = await axios.post("http://crawler:5001/crawl", {
       url,
     });
 
-    // Step 2: Call Detection
+    // Step 2: Detection
     const detectResponse = await axios.post(
       "http://detection:5002/detect",
       crawlResponse.data,
     );
 
+    // Step 3: Performance
     const performanceResponse = await axios.post(
       "http://performance:5003/analyze-performance",
       crawlResponse.data,
     );
 
-    res.json({
-      message: "Analysis successful",
-      detection: detectResponse.data,
-      performance: performanceResponse.data,
+    // Step 4: Report
+    const reportResponse = await axios.post(
+      "http://report:5004/generate-report",
+      {
+        detection: detectResponse.data,
+        performance: performanceResponse.data,
+        uiPatterns: crawlResponse.data.uiPatterns,
+      },
+    );
+
+    // 🔥 SAVE TO MONGODB BEFORE RETURNING
+    await Scan.create({
+      url,
+      report: reportResponse.data,
     });
+
+    return res.json({
+      report: reportResponse.data,
+      raw: {
+        detection: detectResponse.data,
+        performance: performanceResponse.data,
+        uiPatterns: crawlResponse.data.uiPatterns,
+      },
+    });
+
   } catch (error: any) {
-    res.status(500).json({
+    return res.status(500).json({
       error: "Analysis failed",
       details: error.message,
     });

@@ -4,10 +4,8 @@ import {
   DetectionResponse
 } from "../types/detection.types";
 
-import { detectFramework } from "../engine/framework.detector";
-import { detectHosting } from "../engine/infra.detector";
-import { detectRendering } from "../engine/rendering.detector";
-import { calculateConfidence } from "../engine/scoring.engine";
+import { extractSignals } from "../engine/signalExtractor";
+import { detectFromSignals } from "../engine/detector";
 
 export const detectHandler = (
   req: Request<{}, {}, CrawlInput>,
@@ -15,19 +13,16 @@ export const detectHandler = (
 ) => {
   const { headers, scripts } = req.body;
 
-  const frameworkResult = detectFramework(scripts);
-  const hostingResult = detectHosting(headers);
-  const rendering = detectRendering(scripts);
+  // Step 1: Extract signals
+  const signals = extractSignals(headers, scripts);
 
-  const confidence = calculateConfidence(
-    frameworkResult.score,
-    hostingResult.score
-  );
+  // Step 2: Detect from signals
+  const result = detectFromSignals(signals);
 
   return res.json({
-    framework: frameworkResult.name,
-    hosting: hostingResult.name,
-    rendering,
-    confidence
+    framework: result.framework,
+    hosting: result.hosting,
+    rendering: result.rendering,
+    confidence: result.confidence
   });
 };
