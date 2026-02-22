@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>StackLens</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <div class="container">
+    <h2>StackLens</h2>
+
+    <button id="analyzeBtn">Analyze This Page</button>
+
+    <div id="loading" class="hidden">Analyzing...</div>
+
+    <div id="result" class="hidden">
+      <p><strong>Framework:</strong> <span id="framework"></span></p>
+      <p><strong>Hosting:</strong> <span id="hosting"></span></p>
+      <p><strong>Score:</strong> <span id="score"></span></p>
+    </div>
+
+    <div id="error" class="hidden"></div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

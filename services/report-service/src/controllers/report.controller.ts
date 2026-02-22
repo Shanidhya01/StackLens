@@ -13,24 +13,26 @@ export const reportHandler = (
   res: Response<ReportResponse>
 ) => {
 
-  const { detection, performance } = req.body;
+  const { detection, performance, uiPatterns } = req.body;
 
   const summary = generateSummary(
     detection.framework,
     detection.hosting,
-    detection.rendering
+    detection.rendering,
+    uiPatterns
   );
 
   const architectureGrade = calculateArchitectureGrade(
     detection.confidence
   );
 
+  const lighthousePerf = performance.lighthouse?.performance ?? 0;
   const performanceGrade =
-    performance.performanceScore > 80
+    lighthousePerf >= 90 || performance.performanceScore > 85
       ? "High Performance"
-      : performance.performanceScore > 60
-      ? "Moderate Performance"
-      : "Performance Needs Optimization";
+      : lighthousePerf >= 70 || performance.performanceScore > 65
+        ? "Moderate Performance"
+        : "Performance Needs Optimization";
 
   const overallScore = calculateOverallScore(
     detection.confidence,
@@ -41,6 +43,22 @@ export const reportHandler = (
     summary,
     architectureGrade,
     performanceGrade,
-    overallScore
+    overallScore,
+    metrics: {
+      performance: performance.lighthouse?.performance ?? performance.performanceScore,
+      seo: performance.lighthouse?.seo ?? 0,
+      accessibility: performance.lighthouse?.accessibility ?? 0,
+      bestPractices: performance.lighthouse?.bestPractices ?? 0,
+      renderTimingMs: {
+        domContentLoaded: performance.renderTimingMs?.domContentLoaded ?? 0,
+        load: performance.renderTimingMs?.load ?? 0,
+        firstContentfulPaint: performance.renderTimingMs?.firstContentfulPaint ?? 0,
+      },
+    },
+    stackInsights: {
+      frameworkCandidates: detection.frameworkCandidates ?? [],
+      hostingCandidates: detection.hostingCandidates ?? [],
+      detectedTechnologies: detection.detectedTechnologies ?? [],
+    }
   });
 };

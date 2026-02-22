@@ -1,8 +1,6 @@
-import { FrameworkResult } from "../types/detection.types";
-
 export const detectFramework = (
   scripts: string[] = []
-): FrameworkResult => {
+): { name: string; score: number } => {
   const scriptString = scripts.join(" ").toLowerCase();
 
   if (scriptString.includes("_next")) {

@@ -53,6 +53,25 @@ export default function ComparePage() {
   const scoreDiff =
     leftScore != null && rightScore != null ? leftScore - rightScore : null;
 
+  const leftFramework = leftResult?.raw?.detection?.framework;
+  const rightFramework = rightResult?.raw?.detection?.framework;
+  const leftHosting = leftResult?.raw?.detection?.hosting;
+  const rightHosting = rightResult?.raw?.detection?.hosting;
+
+  const leftPerf = leftResult?.report?.metrics?.performance ?? leftResult?.raw?.performance?.lighthouse?.performance ?? null;
+  const rightPerf = rightResult?.report?.metrics?.performance ?? rightResult?.raw?.performance?.lighthouse?.performance ?? null;
+  const perfDelta = leftPerf != null && rightPerf != null ? leftPerf - rightPerf : null;
+
+  const leftUiComplexity =
+    (leftResult?.raw?.uiPatterns?.formCount || 0) +
+    (leftResult?.raw?.uiPatterns?.buttonCount || 0) +
+    ((leftResult?.raw?.uiPatterns?.hasHeroSection ? 1 : 0) * 2);
+  const rightUiComplexity =
+    (rightResult?.raw?.uiPatterns?.formCount || 0) +
+    (rightResult?.raw?.uiPatterns?.buttonCount || 0) +
+    ((rightResult?.raw?.uiPatterns?.hasHeroSection ? 1 : 0) * 2);
+  const uiComplexityDelta = leftResult && rightResult ? leftUiComplexity - rightUiComplexity : null;
+
   if (loading) {
     return (
       <main className="min-h-screen flex items-center justify-center px-6 bg-[#080c10]">
@@ -114,8 +133,23 @@ export default function ComparePage() {
         )}
 
         {scoreDiff != null && (
-          <div className="rounded-lg border border-emerald-400/20 bg-emerald-400/8 px-4 py-3 text-sm text-emerald-100">
+          <div className="rounded-lg border border-emerald-400/20 bg-emerald-400/8 px-4 py-3 text-sm text-emerald-100 space-y-1">
             Score delta: {scoreDiff > 0 ? "Left" : scoreDiff < 0 ? "Right" : "Both"} {scoreDiff === 0 ? "are equal" : `is ahead by ${Math.abs(scoreDiff)} points`}.
+            {perfDelta != null && (
+              <div>
+                Performance delta: {perfDelta > 0 ? "Left" : perfDelta < 0 ? "Right" : "Both"} {perfDelta === 0 ? "are equal" : `is ahead by ${Math.abs(perfDelta)} points`}.
+              </div>
+            )}
+            {uiComplexityDelta != null && (
+              <div>
+                UI complexity difference: {uiComplexityDelta === 0 ? "equal" : `${uiComplexityDelta > 0 ? "Left" : "Right"} appears more complex by ${Math.abs(uiComplexityDelta)} points`}.
+              </div>
+            )}
+            {(leftFramework || rightFramework || leftHosting || rightHosting) && (
+              <div>
+                Stack diff: {leftFramework || "Unknown"} / {leftHosting || "Unknown"} vs {rightFramework || "Unknown"} / {rightHosting || "Unknown"}.
+              </div>
+            )}
           </div>
         )}
 
