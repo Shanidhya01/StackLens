@@ -1,10 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { analyzeWebsite } from "@/lib/api";
 import ScanForm from "@/components/ScanForm";
 import ReportCard from "@/components/ReportCard";
 import RawPanel from "@/components/RawPanel";
+import { useAuth } from "@/context/AuthContext";
 
 const SCAN_STEPS = [
   "Resolving DNS & CDN fingerprint",
@@ -102,6 +104,9 @@ function ScanningOverlay({ step }: { step: number }) {
 }
 
 export default function ScanPage() {
+  const { user } = useAuth();
+  const searchParams = useSearchParams();
+  const autoTriggeredRef = useRef(false);
   const [result, setResult] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [scanStep, setScanStep] = useState(0);
@@ -109,7 +114,7 @@ export default function ScanPage() {
   const [error, setError] = useState("");
   const [activeTab, setActiveTab] = useState<"report" | "raw">("report");
 
-  const handleScan = async (url: string) => {
+  const handleScan = useCallback(async (url: string) => {
     if (!url) return;
     setError("");
     setResult(null);
@@ -129,7 +134,7 @@ export default function ScanPage() {
     }, 600);
 
     try {
-      const data = await analyzeWebsite(url);
+      const data = await analyzeWebsite(url, user?.uid);
       clearInterval(stepInterval);
       setScanStep(SCAN_STEPS.length - 1);
       await new Promise((r) => setTimeout(r, 400));
@@ -141,7 +146,17 @@ export default function ScanPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user?.uid]);
+
+  useEffect(() => {
+    const urlParam = searchParams.get("url");
+    if (!urlParam || autoTriggeredRef.current) {
+      return;
+    }
+
+    autoTriggeredRef.current = true;
+    void handleScan(urlParam);
+  }, [searchParams, handleScan]);
 
   return (
     <main

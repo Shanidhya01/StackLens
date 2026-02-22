@@ -5,13 +5,22 @@ interface Props {
 export default function ScoreBadge({ score }: Props) {
   const color =
     score > 80
-      ? "bg-green-500"
+      ? "#34d399"
       : score > 60
-      ? "bg-yellow-500"
-      : "bg-red-500";
+      ? "#fbbf24"
+      : "#f87171";
 
   return (
-    <div className={`text-white px-4 py-2 rounded ${color}`}>
+    <div
+      className="px-3 py-1.5 rounded text-xs font-semibold"
+      style={{
+        color,
+        background: `${color}1a`,
+        border: `1px solid ${color}40`,
+        minWidth: "44px",
+        textAlign: "center",
+      }}
+    >
       {score}
     </div>
   );

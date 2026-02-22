@@ -2,53 +2,23 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 
-const RECENT_SCANS = [
-  {
-    url: "stripe.com",
-    framework: "Next.js 14",
-    hosting: "Vercel Edge",
-    render: "Hybrid SSR",
-    score: 94,
-    time: "2m ago",
-    status: "done",
-  },
-  {
-    url: "linear.app",
-    framework: "React 18",
-    hosting: "Cloudflare",
-    render: "CSR + SWR",
-    score: 88,
-    time: "1h ago",
-    status: "done",
-  },
-  {
-    url: "vercel.com",
-    framework: "Next.js 14",
-    hosting: "Vercel Edge",
-    render: "SSG + ISR",
-    score: 97,
-    time: "3h ago",
-    status: "done",
-  },
-  {
-    url: "notion.so",
-    framework: "React 18",
-    hosting: "Cloudflare",
-    render: "CSR",
-    score: 71,
-    time: "Yesterday",
-    status: "done",
-  },
-];
+interface RecentScan {
+  url: string;
+  framework?: string;
+  hosting?: string;
+  render?: string;
+  score?: number;
+  time: string;
+}
 
-const QUICK_STATS = [
-  { label: "Total Scans", value: "24", delta: "+3 this week" },
-  { label: "Avg. Score", value: "87", delta: "+4 vs last week" },
-  { label: "Unique Hosts", value: "11", delta: "across all scans" },
-  { label: "Frameworks", value: "6", delta: "detected so far" },
-];
+interface FrameworkStat {
+  name: string;
+  count: number;
+  pct: number;
+}
 
 function ScoreRing({ score }: { score: number }) {
   const color =
@@ -101,15 +71,33 @@ function RenderBadge({ mode }: { mode: string }) {
 
 export default function HomePage() {
   const { user } = useAuth();
+  const router = useRouter();
   const [url, setUrl] = useState("");
   const [analyzing, setAnalyzing] = useState(false);
+  const [recentScans, setRecentScans] = useState<RecentScan[]>([]);
+  const [frameworkStats, setFrameworkStats] = useState<FrameworkStat[]>([]);
 
   const firstName = user?.displayName?.split(" ")[0] || "there";
 
+  // Derive quick stats from real scan data
+  const totalScans = recentScans.length;
+  const avgScore = recentScans.length
+    ? Math.round(recentScans.filter(s => s.score != null).reduce((a, s) => a + (s.score ?? 0), 0) / recentScans.filter(s => s.score != null).length)
+    : 0;
+  const uniqueHosts = new Set(recentScans.map(s => s.hosting).filter(Boolean)).size;
+  const uniqueFrameworks = new Set(recentScans.map(s => s.framework).filter(Boolean)).size;
+
+  const QUICK_STATS = [
+    { label: "Total Scans",   value: String(totalScans),     delta: "all time" },
+    { label: "Avg. Score",    value: avgScore ? String(avgScore) : "—", delta: "across scans" },
+    { label: "Unique Hosts",  value: String(uniqueHosts),    delta: "across all scans" },
+    { label: "Frameworks",    value: String(uniqueFrameworks), delta: "detected so far" },
+  ];
+
   const handleAnalyze = () => {
     if (!url.trim()) return;
-    setAnalyzing(true);
-    setTimeout(() => setAnalyzing(false), 2500);
+    const clean = url.trim().replace(/^https?:\/\//, "");
+    router.push(`/scan?url=${encodeURIComponent(clean)}`);
   };
 
   return (
@@ -281,8 +269,7 @@ export default function HomePage() {
             )}
 
             {/* Quick examples */}
-            {!analyzing && (
-              <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex items-center gap-2 flex-wrap mt-2">
                 <span className="text-xs" style={{ color: "rgba(255,255,255,0.2)" }}>Try:</span>
                 {["github.com", "shopify.com", "figma.com", "tailwindcss.com"].map(s => (
                   <button
@@ -303,7 +290,6 @@ export default function HomePage() {
                   </button>
                 ))}
               </div>
-            )}
           </div>
         </div>
 
@@ -328,49 +314,59 @@ export default function HomePage() {
             <Link href="/history" className="view-all">View all →</Link>
           </div>
 
-          {/* Table header */}
-          <div
-            className="grid px-5 py-2.5 text-xs"
-            style={{
-              gridTemplateColumns: "2fr 1fr 1fr 1fr auto auto",
-              color: "rgba(255,255,255,0.2)",
-              letterSpacing: "0.1em",
-              borderBottom: "1px solid rgba(255,255,255,0.04)",
-            }}
-          >
-            <span>URL</span>
-            <span>FRAMEWORK</span>
-            <span>HOSTING</span>
-            <span>RENDER</span>
-            <span className="text-center">SCORE</span>
-            <span className="text-right">TIME</span>
-          </div>
-
-          {RECENT_SCANS.map((scan, i) => (
-            <div
-              key={i}
-              className="scan-row grid items-center px-5 py-3.5 cursor-pointer"
-              style={{ gridTemplateColumns: "2fr 1fr 1fr 1fr auto auto" }}
-            >
-              <div className="flex items-center gap-2">
-                <div className="w-5 h-5 rounded flex items-center justify-center shrink-0"
-                  style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)" }}>
-                  <svg viewBox="0 0 16 16" fill="none" className="w-3 h-3" stroke="rgba(255,255,255,0.4)" strokeWidth="1.5">
-                    <path d="M2 8a6 6 0 1012 0A6 6 0 002 8z" />
-                    <path d="M8 2c0 0-2 2-2 6s2 6 2 6M8 2c0 0 2 2 2 6s-2 6-2 6M2 8h12" strokeLinecap="round" />
-                  </svg>
-                </div>
-                <span className="text-sm text-white">{scan.url}</span>
-              </div>
-              <span className="text-xs" style={{ color: "rgba(255,255,255,0.5)" }}>{scan.framework}</span>
-              <span className="text-xs" style={{ color: "rgba(255,255,255,0.4)" }}>{scan.hosting}</span>
-              <RenderBadge mode={scan.render} />
-              <div className="flex justify-center">
-                <ScoreRing score={scan.score} />
-              </div>
-              <span className="text-xs text-right" style={{ color: "rgba(255,255,255,0.25)" }}>{scan.time}</span>
+          {recentScans.length === 0 ? (
+            <div className="px-5 py-12 text-center">
+              <p style={{ fontSize: "12px", color: "rgba(255,255,255,0.25)" }}>
+                No scans yet — run your first analysis above.
+              </p>
             </div>
-          ))}
+          ) : (
+            <>
+              {/* Table header */}
+              <div
+                className="grid px-5 py-2.5 text-xs"
+                style={{
+                  gridTemplateColumns: "2fr 1fr 1fr 1fr auto auto",
+                  color: "rgba(255,255,255,0.2)",
+                  letterSpacing: "0.1em",
+                  borderBottom: "1px solid rgba(255,255,255,0.04)",
+                }}
+              >
+                <span>URL</span>
+                <span>FRAMEWORK</span>
+                <span>HOSTING</span>
+                <span>RENDER</span>
+                <span className="text-center">SCORE</span>
+                <span className="text-right">TIME</span>
+              </div>
+
+              {recentScans.slice(0, 5).map((scan, i) => (
+                <div
+                  key={i}
+                  className="scan-row grid items-center px-5 py-3.5 cursor-pointer"
+                  style={{ gridTemplateColumns: "2fr 1fr 1fr 1fr auto auto" }}
+                >
+                  <div className="flex items-center gap-2">
+                    <div className="w-5 h-5 rounded flex items-center justify-center shrink-0"
+                      style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                      <svg viewBox="0 0 16 16" fill="none" className="w-3 h-3" stroke="rgba(255,255,255,0.4)" strokeWidth="1.5">
+                        <path d="M2 8a6 6 0 1012 0A6 6 0 002 8z" />
+                        <path d="M8 2c0 0-2 2-2 6s2 6 2 6M8 2c0 0 2 2 2 6s-2 6-2 6M2 8h12" strokeLinecap="round" />
+                      </svg>
+                    </div>
+                    <span className="text-sm text-white">{scan.url}</span>
+                  </div>
+                  <span className="text-xs" style={{ color: "rgba(255,255,255,0.5)" }}>{scan.framework ?? "—"}</span>
+                  <span className="text-xs" style={{ color: "rgba(255,255,255,0.4)" }}>{scan.hosting ?? "—"}</span>
+                  {scan.render ? <RenderBadge mode={scan.render} /> : <span style={{ fontSize: "12px", color: "rgba(255,255,255,0.2)" }}>—</span>}
+                  <div className="flex justify-center">
+                    {scan.score != null ? <ScoreRing score={scan.score} /> : <span style={{ fontSize: "11px", color: "rgba(255,255,255,0.2)" }}>—</span>}
+                  </div>
+                  <span className="text-xs text-right" style={{ color: "rgba(255,255,255,0.25)" }}>{scan.time}</span>
+                </div>
+              ))}
+            </>
+          )}
         </div>
 
         {/* Bottom cards */}
@@ -379,30 +375,29 @@ export default function HomePage() {
           {/* Top frameworks */}
           <div className="card p-5">
             <p className="section-label mb-4">TOP FRAMEWORKS DETECTED</p>
-            <div className="space-y-3">
-              {[
-                { name: "Next.js", count: 12, pct: 50 },
-                { name: "React (CRA/Vite)", count: 7, pct: 29 },
-                { name: "Nuxt", count: 3, pct: 12 },
-                { name: "Astro", count: 2, pct: 9 },
-              ].map((f) => (
-                <div key={f.name}>
-                  <div className="flex justify-between text-xs mb-1">
-                    <span style={{ color: "rgba(255,255,255,0.6)" }}>{f.name}</span>
-                    <span style={{ color: "rgba(255,255,255,0.25)" }}>{f.count} scans</span>
+            {frameworkStats.length === 0 ? (
+              <p style={{ fontSize: "12px", color: "rgba(255,255,255,0.2)" }}>No data yet.</p>
+            ) : (
+              <div className="space-y-3">
+                {frameworkStats.map((f) => (
+                  <div key={f.name}>
+                    <div className="flex justify-between text-xs mb-1">
+                      <span style={{ color: "rgba(255,255,255,0.6)" }}>{f.name}</span>
+                      <span style={{ color: "rgba(255,255,255,0.25)" }}>{f.count} scans</span>
+                    </div>
+                    <div className="h-1 rounded overflow-hidden" style={{ background: "rgba(255,255,255,0.05)" }}>
+                      <div
+                        className="h-full rounded"
+                        style={{ width: `${f.pct}%`, background: "rgba(52,211,153,0.5)" }}
+                      />
+                    </div>
                   </div>
-                  <div className="h-1 rounded overflow-hidden" style={{ background: "rgba(255,255,255,0.05)" }}>
-                    <div
-                      className="h-full rounded"
-                      style={{ width: `${f.pct}%`, background: "rgba(52,211,153,0.5)" }}
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
 
-          {/* Tips */}
+          {/* Quick Actions */}
           <div className="card p-5" style={{ background: "rgba(52,211,153,0.02)", borderColor: "rgba(52,211,153,0.08)" }}>
             <p className="section-label mb-4">QUICK ACTIONS</p>
             <div className="space-y-2">

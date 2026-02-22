@@ -3,7 +3,7 @@
 import { useState } from "react";
 
 interface Props {
-  data: any;
+  data: unknown;
 }
 
 function highlight(json: string): string {
@@ -36,7 +36,6 @@ function highlight(json: string): string {
 
 export default function RawPanel({ data }: Props) {
   const [copied, setCopied] = useState(false);
-  const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
 
   const raw = JSON.stringify(data, null, 2);
   const highlighted = highlight(raw);
@@ -54,7 +53,7 @@ export default function RawPanel({ data }: Props) {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `stacklens-report-${Date.now()}.json`;
+    a.download = "stacklens-report.json";
     a.click();
     URL.revokeObjectURL(url);
   };

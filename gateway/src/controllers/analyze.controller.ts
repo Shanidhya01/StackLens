@@ -2,7 +2,7 @@ import axios from "axios";
 import { Scan } from "../models/scan.model";   // 🔥 ADD THIS
 
 export const analyzeHandler = async (req: any, res: any) => {
-  const { url } = req.body;
+  const { url, userId } = req.body;
 
   if (!url) {
     return res.status(400).json({ error: "URL is required" });
@@ -39,6 +39,7 @@ export const analyzeHandler = async (req: any, res: any) => {
     // 🔥 SAVE TO MONGODB BEFORE RETURNING
     await Scan.create({
       url,
+      userId,
       report: reportResponse.data,
     });
 

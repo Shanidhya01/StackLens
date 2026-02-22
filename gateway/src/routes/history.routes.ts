@@ -3,8 +3,10 @@ import { Scan } from "../models/scan.model";
 
 const router = Router();
 
-router.get("/", async (_, res) => {
-  const scans = await Scan.find().sort({ scannedAt: -1 });
+router.get("/", async (req, res) => {
+  const { userId } = req.query;
+  const filter = userId ? { userId: String(userId) } : {};
+  const scans = await Scan.find(filter).sort({ scannedAt: -1 });
   res.json(scans);
 });
 

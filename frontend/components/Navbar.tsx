@@ -158,17 +158,20 @@ export default function Navbar() {
 
           {/* Links + Auth */}
           <div className="flex items-center gap-2">
-            <Link href="/" className={`nav-link${isActive("/") ? " active" : ""}`}>
-              Home
-            </Link>
-            <Link href="/history" className={`nav-link${isActive("/history") ? " active" : ""}`}>
-              History
-            </Link>
-
-            <div className="divider mx-2" />
-
             {user ? (
               <>
+                <Link href="/" className={`nav-link${isActive("/") ? " active" : ""}`}>
+                  Home
+                </Link>
+                <Link href="/history" className={`nav-link${isActive("/history") ? " active" : ""}`}>
+                  History
+                </Link>
+                <Link href="/compare" className={`nav-link${isActive("/compare") ? " active" : ""}`}>
+                  Compare
+                </Link>
+
+                <div className="divider mx-2" />
+
                 <div className="nav-user">
                   <div className="nav-user-avatar">
                     {(user.displayName || user.email || "?")[0].toUpperCase()}
@@ -195,7 +198,7 @@ export default function Navbar() {
       </nav>
 
       {/* Spacer so content doesn't hide under fixed nav */}
-      <div style={{ height: "57px" }} />
+      <div className="h-14.25" />
     </>
   );
 }

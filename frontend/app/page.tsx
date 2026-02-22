@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+import { useAuth } from "@/context/AuthContext";
 
 const FEATURES = [
   {
@@ -115,9 +116,91 @@ function ScanningBar() {
 }
 
 export default function LandingPage() {
+  const { user, loading } = useAuth();
   const [url, setUrl] = useState("");
   const heroRef = useRef<HTMLDivElement>(null);
 
+  // --- Loading state ---
+  if (loading) {
+    return (
+      <main className="min-h-screen flex items-center justify-center" style={{ background: "#080c10" }}>
+        <div className="text-center">
+          <p className="text-xs tracking-[0.18em] text-emerald-400 mb-2" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>STACKLENS</p>
+          <p className="text-sm" style={{ color: "rgba(255,255,255,0.4)", fontFamily: "'IBM Plex Mono', monospace" }}>Checking session...</p>
+        </div>
+      </main>
+    );
+  }
+
+  // --- Logged-in state ---
+  if (user) {
+    const firstName = user.displayName?.split(" ")[0] || "there";
+    return (
+      <main style={{ minHeight: "100vh", background: "#080c10", fontFamily: "'IBM Plex Mono', monospace", display: "flex", alignItems: "center", justifyContent: "center", padding: "40px 24px" }}>
+        <style>{`
+          @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Syne:wght@700;800&display=swap');
+          .au-row {
+            display: flex; align-items: center; gap: 12px;
+            padding: 14px 18px; border-radius: 8px;
+            text-decoration: none;
+            border: 1px solid rgba(255,255,255,0.07);
+            background: rgba(255,255,255,0.02);
+            transition: background .15s, border-color .15s;
+          }
+          .au-row:hover { background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.13); }
+          .au-row-primary {
+            display: flex; align-items: center; gap: 12px;
+            padding: 14px 18px; border-radius: 8px;
+            text-decoration: none;
+            border: 1px solid rgba(52,211,153,0.22);
+            background: rgba(52,211,153,0.05);
+            transition: background .15s, border-color .15s;
+          }
+          .au-row-primary:hover { background: rgba(52,211,153,0.09); border-color: rgba(52,211,153,0.35); }
+        `}</style>
+
+        <div style={{ width: "100%", maxWidth: 400 }}>
+          {/* Greeting */}
+          <p style={{ fontSize: 10, letterSpacing: "0.18em", color: "rgba(255,255,255,0.25)", marginBottom: 10 }}>WELCOME BACK</p>
+          <h1 style={{ fontFamily: "'Syne', sans-serif", fontSize: "2rem", fontWeight: 800, color: "#fff", margin: "0 0 32px" }}>
+            Hey, {firstName}
+          </h1>
+
+          {/* Nav links */}
+          <div style={{ display: "flex", flexDirection: "column" as const, gap: 8 }}>
+            <Link href="/dashboard" className="au-row-primary">
+              <span style={{ fontSize: 13, color: "#34d399", flexShrink: 0 }}>→</span>
+              <div>
+                <div style={{ fontSize: 13, color: "#fff", fontWeight: 500 }}>Dashboard</div>
+                <div style={{ fontSize: 11, color: "rgba(255,255,255,0.38)", marginTop: 2 }}>Run a new scan or view reports</div>
+              </div>
+            </Link>
+
+            {[
+              { href: "/scan",    label: "New Scan",        sub: "Inspect any public URL" },
+              { href: "/history", label: "Scan History",    sub: "Browse previous results" },
+              { href: "/docs",    label: "API Docs",        sub: "Integrate with your pipeline" },
+            ].map(a => (
+              <Link key={a.href} href={a.href} className="au-row">
+                <span style={{ fontSize: 13, color: "rgba(255,255,255,0.25)", flexShrink: 0 }}>→</span>
+                <div>
+                  <div style={{ fontSize: 13, color: "rgba(255,255,255,0.75)" }}>{a.label}</div>
+                  <div style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", marginTop: 2 }}>{a.sub}</div>
+                </div>
+              </Link>
+            ))}
+          </div>
+
+          {/* Email */}
+          <p style={{ marginTop: 28, fontSize: 11, color: "rgba(255,255,255,0.2)" }}>
+            Signed in as {user.email}
+          </p>
+        </div>
+      </main>
+    );
+  }
+
+  // --- Guest / marketing page ---
   return (
     <main
       className="min-h-screen text-white"
@@ -216,104 +299,20 @@ export default function LandingPage() {
         }
       `}</style>
 
-      {/* Hero */}
-      <section ref={heroRef} className="relative grid-bg min-h-screen flex flex-col items-center justify-center px-6">
-        {/* Radial glow */}
-        <div className="absolute inset-0 pointer-events-none" style={{
-          background: "radial-gradient(ellipse 60% 50% at 50% 40%, rgba(52,211,153,0.07) 0%, transparent 70%)"
-        }} />
 
-        <div className="relative z-10 max-w-4xl w-full text-center">
-          <div className="section-label mb-6 flex items-center justify-center gap-2">
-            <div className="w-6 h-px bg-emerald-400 opacity-50" />
-            DISTRIBUTED ARCHITECTURE ANALYSIS PLATFORM
-            <div className="w-6 h-px bg-emerald-400 opacity-50" />
-          </div>
-
-          <h1 className="hero-title text-5xl md:text-7xl font-extrabold mb-6 leading-none tracking-tight">
-            <span className="text-white">Decode Any</span>
-            <br />
-            <span style={{ color: "#34d399" }}>Website's Stack</span>
-          </h1>
-
-          <p className="text-sm md:text-base mb-10 max-w-xl mx-auto leading-relaxed" style={{ color: "rgba(255,255,255,0.45)", fontFamily: "'IBM Plex Mono', monospace" }}>
-            StackLens inspects public URLs across distributed microservices to surface tech stacks, infrastructure topology, rendering strategies, and performance signals — in seconds.
+      <section className="grid-bg relative">
+        <div className="absolute inset-0 pointer-events-none" style={{ background: "radial-gradient(ellipse 50% 80% at 50% 50%, rgba(52,211,153,0.05) 0%, transparent 70%)" }} />
+        <div className="relative z-10 max-w-2xl mx-auto px-6 py-28 text-center">
+          <div className="section-label mb-4">GET STARTED</div>
+          <h2 className="hero-title text-4xl md:text-5xl font-extrabold text-white mb-4">
+            Start Analyzing<br /><span style={{ color: "#34d399" }}>in 30 seconds</span>
+          </h2>
+          <p className="text-sm mb-10" style={{ color: "rgba(255,255,255,0.4)" }}>
+            No setup. No SDK. Paste a URL and get a full architecture report instantly.
           </p>
-
-          {/* URL Input */}
-          <div className="flex flex-col sm:flex-row gap-3 max-w-2xl mx-auto mb-10">
-            <div className="relative flex-1">
-              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-xs" style={{ color: "rgba(52,211,153,0.6)" }}>https://</span>
-              <input
-                type="text"
-                value={url}
-                onChange={e => setUrl(e.target.value)}
-                placeholder="stripe.com"
-                className="glow-input w-full bg-transparent pl-16 pr-4 py-4 rounded text-white text-sm"
-                style={{
-                  background: "rgba(255,255,255,0.03)",
-                  border: "1px solid rgba(255,255,255,0.1)",
-                  fontFamily: "'IBM Plex Mono', monospace",
-                }}
-              />
-            </div>
-            <Link href="/dashboard" className="cta-primary px-6 py-4 rounded whitespace-nowrap flex items-center gap-2">
-              Analyze →
-            </Link>
-          </div>
-
-          {/* Example tags */}
-          <div className="flex flex-wrap justify-center gap-2 mb-16">
-            {["stripe.com", "vercel.com", "linear.app", "notion.so"].map(site => (
-              <button
-                key={site}
-                onClick={() => setUrl(site)}
-                className="text-xs px-3 py-1.5 rounded transition-all"
-                style={{ color: "rgba(255,255,255,0.3)", border: "1px solid rgba(255,255,255,0.06)", fontFamily: "inherit" }}
-                onMouseEnter={e => { (e.target as HTMLElement).style.color = "rgba(255,255,255,0.7)"; }}
-                onMouseLeave={e => { (e.target as HTMLElement).style.color = "rgba(255,255,255,0.3)"; }}
-              >
-                {site}
-              </button>
-            ))}
-          </div>
-
-          {/* Terminal Preview */}
-          <div className="max-w-2xl mx-auto rounded-lg overflow-hidden text-left"
-            style={{ border: "1px solid rgba(255,255,255,0.08)", background: "rgba(0,0,0,0.4)" }}>
-            <div className="flex items-center gap-2 px-4 py-3" style={{ background: "rgba(255,255,255,0.03)", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
-              <div className="w-2.5 h-2.5 rounded-full" style={{ background: "#ff5f57" }} />
-              <div className="w-2.5 h-2.5 rounded-full" style={{ background: "#febc2e" }} />
-              <div className="w-2.5 h-2.5 rounded-full" style={{ background: "#28c840" }} />
-              <span className="ml-3 text-xs" style={{ color: "rgba(255,255,255,0.25)" }}>stacklens — analyze stripe.com</span>
-            </div>
-            <div className="p-5 space-y-1">
-              <TerminalLine delay={0}><span style={{ color: "#34d399" }}>$</span> <span style={{ color: "rgba(255,255,255,0.7)" }}>stacklens analyze stripe.com</span></TerminalLine>
-              <TerminalLine delay={300}><span style={{ color: "rgba(255,255,255,0.25)" }}>→ Resolving DNS & CDN fingerprint...</span></TerminalLine>
-              <TerminalLine delay={700}><span style={{ color: "rgba(255,255,255,0.25)" }}>→ Fetching HTTP response headers...</span></TerminalLine>
-              <TerminalLine delay={1100}><span style={{ color: "rgba(255,255,255,0.25)" }}>→ Analyzing JS bundle signatures...</span></TerminalLine>
-              <div className="pt-1"><ScanningBar /></div>
-              <TerminalLine delay={1600}>
-                <span style={{ color: "#34d399" }}>✓</span>{" "}
-                <span style={{ color: "rgba(255,255,255,0.5)" }}>Framework: </span>
-                <span className="text-white">Next.js 14 (App Router)</span>
-              </TerminalLine>
-              <TerminalLine delay={1900}>
-                <span style={{ color: "#34d399" }}>✓</span>{" "}
-                <span style={{ color: "rgba(255,255,255,0.5)" }}>Hosting: </span>
-                <span className="text-white">Vercel Edge Network (iad1)</span>
-              </TerminalLine>
-              <TerminalLine delay={2200}>
-                <span style={{ color: "#34d399" }}>✓</span>{" "}
-                <span style={{ color: "rgba(255,255,255,0.5)" }}>Render: </span>
-                <span className="text-white">Hybrid SSR + ISR</span>
-              </TerminalLine>
-              <TerminalLine delay={2500}>
-                <span style={{ color: "#34d399" }}>✓</span>{" "}
-                <span style={{ color: "rgba(255,255,255,0.5)" }}>Performance: </span>
-                <span className="text-white">TTFB 61ms · Brotli compressed · Score 94</span>
-              </TerminalLine>
-            </div>
+          <div className="flex justify-center gap-3">
+            <Link href="/login" className="cta-primary px-8 py-4 rounded text-sm">Create Free Account</Link>
+            <a href="#" className="cta-secondary px-8 py-4 rounded text-sm">View API Docs</a>
           </div>
         </div>
       </section>
@@ -401,37 +400,8 @@ export default function LandingPage() {
       </section>
 
       {/* CTA Section */}
-      <section className="grid-bg relative">
-        <div className="absolute inset-0 pointer-events-none" style={{ background: "radial-gradient(ellipse 50% 80% at 50% 50%, rgba(52,211,153,0.05) 0%, transparent 70%)" }} />
-        <div className="relative z-10 max-w-2xl mx-auto px-6 py-28 text-center">
-          <div className="section-label mb-4">GET STARTED</div>
-          <h2 className="hero-title text-4xl md:text-5xl font-extrabold text-white mb-4">
-            Start Analyzing<br /><span style={{ color: "#34d399" }}>in 30 seconds</span>
-          </h2>
-          <p className="text-sm mb-10" style={{ color: "rgba(255,255,255,0.4)" }}>
-            No setup. No SDK. Paste a URL and get a full architecture report instantly.
-          </p>
-          <div className="flex justify-center gap-3">
-            <Link href="/login" className="cta-primary px-8 py-4 rounded text-sm">Create Free Account</Link>
-            <a href="#" className="cta-secondary px-8 py-4 rounded text-sm">View API Docs</a>
-          </div>
-        </div>
-      </section>
+      
 
-      {/* Footer */}
-      <footer style={{ borderTop: "1px solid rgba(255,255,255,0.05)" }}>
-        <div className="max-w-6xl mx-auto px-6 py-8 flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 pulse-dot" />
-            <span className="text-xs" style={{ color: "rgba(255,255,255,0.3)" }}>StackLens — All systems operational</span>
-          </div>
-          <div className="flex gap-6">
-            {["Privacy", "Terms", "Status", "GitHub"].map(l => (
-              <a key={l} href="#" className="nav-link text-xs">{l}</a>
-            ))}
-          </div>
-        </div>
-      </footer>
     </main>
   );
 }
