@@ -63,15 +63,23 @@ const isTransientFailure = (error: any) => {
   return code === "ECONNABORTED" || code === "ETIMEDOUT" || code === "ECONNRESET";
 };
 
+const warmupService = async (baseUrl: string) => {
+  try {
+    await axios.get(`${baseUrl}/health`, { timeout: 20000 });
+  } catch {
+    // best-effort warmup only
+  }
+};
+
 const callService = async (
   serviceName: string,
   baseUrl: string,
   path: string,
   payload: unknown,
-  timeoutMs = 60000,
+  timeoutMs = 90000,
 ) => {
-  const maxAttempts = 3;
-  const retryDelays = [1200, 2500];
+  const maxAttempts = 5;
+  const retryDelays = [3000, 6000, 10000, 15000];
   let lastError: any;
 
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
@@ -81,6 +89,7 @@ const callService = async (
       lastError = error;
       const shouldRetry = attempt < maxAttempts && isTransientFailure(error);
       if (shouldRetry) {
+        await warmupService(baseUrl);
         await sleep(retryDelays[attempt - 1] || 2500);
         continue;
       }
