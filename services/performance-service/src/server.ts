@@ -2,7 +2,7 @@ import express from "express";
 import performanceRoutes from "./routes/performance.routes";
 
 const app = express();
-const PORT = 5003;
+const PORT = Number(process.env.PORT) || 5003;
 
 app.use(express.json());
 

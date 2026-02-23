@@ -2,7 +2,7 @@ import express from "express";
 import reportRoutes from "./routes/report.routes";
 
 const app = express();
-const PORT = 5004;
+const PORT = Number(process.env.PORT) || 5004;
 
 app.use(express.json());
 
