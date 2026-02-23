@@ -14,6 +14,6 @@
 
     "types": ["node"]
   },
-  "include": ["src", "../crawler-service/src/parsers/uiPattern.parser.ts"],
+  "include": ["src"],
   "exclude": ["node_modules"]
 }

@@ -27,7 +27,7 @@ interface LighthouseScores {
   bestPractices: number;
 }
 
-const toScore = (value?: number) => {
+const toScore = (value?: number | null) => {
   if (typeof value !== "number" || Number.isNaN(value)) {
     return 0;
   }
