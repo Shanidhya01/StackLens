@@ -1,6 +1,5 @@
 import axios from "axios";
 import puppeteer from "puppeteer";
-import { launch } from "chrome-launcher";
 import https from "https";
 import { parseHTML } from "../parsers/html.parser";
 import { extractUIPatterns } from "../parsers/uiPattern.parser";
@@ -155,6 +154,8 @@ const runRuntimeAnalysis = async (url: string, staticHtml: string): Promise<Runt
 const runLighthouseAudit = async (url: string): Promise<LighthouseScores> => {
   const lighthouseModule = await importEsmModule("lighthouse");
   const lighthouse = lighthouseModule.default || lighthouseModule;
+  const chromeLauncherModule = await importEsmModule("chrome-launcher");
+  const launch = chromeLauncherModule.launch;
   const resolvedChromePath = process.env.CHROME_PATH || puppeteer.executablePath();
 
   const chrome = await launch({
