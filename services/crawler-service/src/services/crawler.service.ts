@@ -1,5 +1,4 @@
 import axios from "axios";
-import lighthouse from "lighthouse";
 import puppeteer from "puppeteer";
 import { launch } from "chrome-launcher";
 import https from "https";
@@ -26,6 +25,10 @@ interface LighthouseScores {
   accessibility: number;
   bestPractices: number;
 }
+
+const importEsmModule = new Function("moduleName", "return import(moduleName)") as (
+  moduleName: string
+) => Promise<any>;
 
 const toScore = (value?: number | null) => {
   if (typeof value !== "number" || Number.isNaN(value)) {
@@ -150,6 +153,8 @@ const runRuntimeAnalysis = async (url: string, staticHtml: string): Promise<Runt
 };
 
 const runLighthouseAudit = async (url: string): Promise<LighthouseScores> => {
+  const lighthouseModule = await importEsmModule("lighthouse");
+  const lighthouse = lighthouseModule.default || lighthouseModule;
   const resolvedChromePath = process.env.CHROME_PATH || puppeteer.executablePath();
 
   const chrome = await launch({
