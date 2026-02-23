@@ -1,4 +1,4 @@
-const API_BASE = "http://localhost:5000";
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 
 export const analyzeWebsite = async (url: string, userId?: string) => {
   const res = await fetch(`${API_BASE}/analyze`, {
