@@ -15,6 +15,14 @@ const getServiceUrl = (...envKeys: string[]) => {
 
 const isHtmlPayload = (value: string) => /<\s*!doctype html|<html[\s>]/i.test(value);
 
+const getHostFromUrl = (value: string) => {
+  try {
+    return new URL(value).host;
+  } catch {
+    return value;
+  }
+};
+
 const normalizeTargetUrl = (input: string) => {
   const trimmed = input.trim();
   if (!trimmed) {
@@ -99,7 +107,8 @@ const callService = async (
 
   const statusCode = lastError?.response?.status || 500;
   const downstreamDetails = lastError?.response?.data || lastError?.message;
-  const normalizedDetails = toClientErrorMessage(statusCode, downstreamDetails, serviceName);
+  const serviceWithHost = `${serviceName} (${getHostFromUrl(baseUrl)})`;
+  const normalizedDetails = toClientErrorMessage(statusCode, downstreamDetails, serviceWithHost);
   const wrappedError: any = new Error(normalizedDetails);
   wrappedError.statusCode = statusCode;
   throw wrappedError;
