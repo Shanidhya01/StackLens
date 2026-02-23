@@ -15,6 +15,25 @@ const getServiceUrl = (...envKeys: string[]) => {
 
 const isHtmlPayload = (value: string) => /<\s*!doctype html|<html[\s>]/i.test(value);
 
+const normalizeTargetUrl = (input: string) => {
+  const trimmed = input.trim();
+  if (!trimmed) {
+    return "";
+  }
+
+  const withProtocol = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+
+  try {
+    const parsed = new URL(withProtocol);
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+      return "";
+    }
+    return parsed.toString();
+  } catch {
+    return "";
+  }
+};
+
 const toClientErrorMessage = (statusCode: number, value: unknown, serviceName?: string) => {
   const text =
     typeof value === "string"
@@ -79,6 +98,7 @@ const callService = async (
 
 export const analyzeHandler = async (req: any, res: any) => {
   const { url, userId } = req.body;
+  const normalizedUrl = normalizeTargetUrl(url || "");
   const crawlerUrl = getServiceUrl("CRAWLER_URL", "CRAWLER_SERVICE_URL");
   const detectionUrl = getServiceUrl("DETECTION_URL", "DETECTION_SERVICE_URL");
   const performanceUrl = getServiceUrl("PERFORMANCE_URL", "PERFORMANCE_SERVICE_URL");
@@ -95,10 +115,14 @@ export const analyzeHandler = async (req: any, res: any) => {
     return res.status(400).json({ error: "URL is required" });
   }
 
+  if (!normalizedUrl) {
+    return res.status(400).json({ error: "Invalid URL" });
+  }
+
   try {
     // Step 1: Crawl
     const crawlResponse = await callService("Crawler service", crawlerUrl, "/crawl", {
-      url,
+      url: normalizedUrl,
     });
 
     // Step 2: Detection
@@ -139,7 +163,7 @@ export const analyzeHandler = async (req: any, res: any) => {
 
     try {
       await Scan.create({
-        url,
+        url: normalizedUrl,
         userId,
         report: reportResponse.data,
         raw: rawPayload,
