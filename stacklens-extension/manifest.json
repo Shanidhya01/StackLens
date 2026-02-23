@@ -5,7 +5,7 @@
   "description": "Analyze any website instantly using StackLens.",
   "permissions": ["activeTab", "scripting"],
   "host_permissions": [
-    "http://localhost:5000/*"
+    "https://stacklens-gateway.onrender.com/*"
   ],
   "action": {
     "default_popup": "popup.html",
