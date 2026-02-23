@@ -8,6 +8,10 @@ app.use(express.json());
 
 app.use("/generate-report", reportRoutes);
 
+app.get("/", (_, res) => {
+  res.json({ message: "Welcome to the Report Service" });
+});
+
 app.get("/health", (_, res) => {
   res.json({ service: "Report", status: "OK" });
 });

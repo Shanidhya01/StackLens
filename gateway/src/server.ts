@@ -22,6 +22,10 @@ app.use(express.json());
 app.use("/analyze", analyzeRoutes);
 app.use("/history", historyRoutes);
 
+app.get("/", (_, res) => {
+  res.json({ message: "Welcome to the Gateway Service" });
+});
+
 app.get("/health", (_, res) => {
   res.json({ service: "Gateway", status: "OK" });
 });

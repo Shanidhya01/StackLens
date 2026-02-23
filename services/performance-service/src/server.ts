@@ -8,6 +8,10 @@ app.use(express.json());
 
 app.use("/analyze-performance", performanceRoutes);
 
+app.get("/", (_, res) => {
+  res.json({ message: "Welcome to the Performance Service" });
+});
+
 app.get("/health", (_, res) => {
   res.json({ service: "Performance", status: "OK" });
 });

@@ -8,6 +8,12 @@ app.use(express.json());
 
 app.use("/detect", detectRoutes);
 
+
+app.get("/", (_, res) => {
+  res.json({ message: "Welcome to the Detection Service" });
+});
+
+
 app.get("/health", (_, res) => {
   res.json({ service: "Detection", status: "OK" });
 });
