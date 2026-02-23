@@ -1,5 +1,18 @@
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 
+const sanitizeErrorMessage = (input: unknown, fallback: string) => {
+  const text = typeof input === "string" ? input : "";
+  if (!text) {
+    return fallback;
+  }
+
+  if (/<\s*!doctype html|<html[\s>]/i.test(text)) {
+    return "Service unavailable right now (502). Please try again in a moment.";
+  }
+
+  return text.length > 300 ? `${text.slice(0, 300)}...` : text;
+};
+
 export const analyzeWebsite = async (url: string, userId?: string) => {
   const res = await fetch(`${API_BASE}/analyze`, {
     method: "POST",
@@ -9,7 +22,8 @@ export const analyzeWebsite = async (url: string, userId?: string) => {
 
   if (!res.ok) {
     const errorBody = await res.json().catch(() => ({}));
-    const message = errorBody?.details || errorBody?.error || "Failed to analyze website";
+    const rawMessage = errorBody?.details || errorBody?.error;
+    const message = sanitizeErrorMessage(rawMessage, "Failed to analyze website");
     throw new Error(message);
   }
 

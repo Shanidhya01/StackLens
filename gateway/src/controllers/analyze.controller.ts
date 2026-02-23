@@ -1,8 +1,67 @@
 import axios from "axios";
 import { Scan } from "../models/scan.model";   
 
+const stripTrailingSlash = (value: string) => value.replace(/\/+$/, "");
+
+const getServiceUrl = (...envKeys: string[]) => {
+  for (const key of envKeys) {
+    const value = process.env[key];
+    if (value && value.trim()) {
+      return stripTrailingSlash(value.trim());
+    }
+  }
+  return "";
+};
+
+const isHtmlPayload = (value: string) => /<\s*!doctype html|<html[\s>]/i.test(value);
+
+const toClientErrorMessage = (statusCode: number, value: unknown, serviceName?: string) => {
+  const text =
+    typeof value === "string"
+      ? value
+      : (value as any)?.message || (value as any)?.error || "Unknown upstream error";
+
+  if (typeof text === "string" && isHtmlPayload(text)) {
+    if (statusCode === 502 || statusCode === 503 || statusCode === 504) {
+      return `${serviceName || "Upstream service"} is unavailable right now (${statusCode}).`;
+    }
+    return `${serviceName || "Upstream service"} returned an invalid HTML error response.`;
+  }
+
+  return typeof text === "string" ? text.slice(0, 300) : "Unknown upstream error";
+};
+
+const callService = async (
+  serviceName: string,
+  baseUrl: string,
+  path: string,
+  payload: unknown,
+) => {
+  try {
+    return await axios.post(`${baseUrl}${path}`, payload, { timeout: 45000 });
+  } catch (error: any) {
+    const statusCode = error?.response?.status || 500;
+    const downstreamDetails = error?.response?.data || error?.message;
+    const normalizedDetails = toClientErrorMessage(statusCode, downstreamDetails, serviceName);
+    const wrappedError: any = new Error(normalizedDetails);
+    wrappedError.statusCode = statusCode;
+    throw wrappedError;
+  }
+};
+
 export const analyzeHandler = async (req: any, res: any) => {
   const { url, userId } = req.body;
+  const crawlerUrl = getServiceUrl("CRAWLER_URL", "CRAWLER_SERVICE_URL");
+  const detectionUrl = getServiceUrl("DETECTION_URL", "DETECTION_SERVICE_URL");
+  const performanceUrl = getServiceUrl("PERFORMANCE_URL", "PERFORMANCE_SERVICE_URL");
+  const reportUrl = getServiceUrl("REPORT_URL", "REPORT_SERVICE_URL");
+
+  if (!crawlerUrl || !detectionUrl || !performanceUrl || !reportUrl) {
+    return res.status(500).json({
+      error: "Analysis failed",
+      details: "Gateway service URLs are not configured correctly.",
+    });
+  }
 
   if (!url) {
     return res.status(400).json({ error: "URL is required" });
@@ -10,25 +69,31 @@ export const analyzeHandler = async (req: any, res: any) => {
 
   try {
     // Step 1: Crawl
-    const crawlResponse = await axios.post(`${process.env.CRAWLER_URL}/crawl`, {
+    const crawlResponse = await callService("Crawler service", crawlerUrl, "/crawl", {
       url,
     });
 
     // Step 2: Detection
-    const detectResponse = await axios.post(
-      `${process.env.DETECTION_URL}/detect`,
+    const detectResponse = await callService(
+      "Detection service",
+      detectionUrl,
+      "/detect",
       crawlResponse.data,
     );
 
     // Step 3: Performance
-    const performanceResponse = await axios.post(
-      `${process.env.PERFORMANCE_URL}/analyze-performance`,
+    const performanceResponse = await callService(
+      "Performance service",
+      performanceUrl,
+      "/analyze-performance",
       crawlResponse.data,
     );
 
     // Step 4: Report
-    const reportResponse = await axios.post(
-      `${process.env.REPORT_URL}/generate-report`,
+    const reportResponse = await callService(
+      "Report service",
+      reportUrl,
+      "/generate-report",
       {
         detection: detectResponse.data,
         performance: performanceResponse.data,
@@ -61,12 +126,8 @@ export const analyzeHandler = async (req: any, res: any) => {
     });
 
   } catch (error: any) {
-    const downstreamDetails = error?.response?.data;
-    const normalizedDetails =
-      typeof downstreamDetails === "string"
-        ? downstreamDetails
-        : downstreamDetails?.message || downstreamDetails?.error || error.message;
-    const statusCode = error?.response?.status || 500;
+    const statusCode = error?.statusCode || 500;
+    const normalizedDetails = error?.message || "Analysis failed due to an upstream service error.";
 
     return res.status(statusCode).json({
       error: "Analysis failed",

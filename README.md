@@ -364,11 +364,11 @@ Create a `.env` file in the project root with the following variables:
 # MongoDB
 MONGO_URI=mongodb+srv://<username>:<password>@<cluster>.mongodb.net/stacklens
 
-# Service URLs (optional — defaults to Docker hostnames, then localhost)
-CRAWLER_SERVICE_URL=http://localhost:5001
-DETECTION_SERVICE_URL=http://localhost:5002
-PERFORMANCE_SERVICE_URL=http://localhost:5003
-REPORT_SERVICE_URL=http://localhost:5004
+# Service URLs
+CRAWLER_URL=http://localhost:5001
+DETECTION_URL=http://localhost:5002
+PERFORMANCE_URL=http://localhost:5003
+REPORT_URL=http://localhost:5004
 ```
 
 Create a `.env.local` file in the `frontend/` directory:
@@ -380,6 +380,7 @@ NEXT_PUBLIC_FIREBASE_PROJECT_ID=your_project_id
 NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your_project.firebasestorage.app
 NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
 NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
+NEXT_PUBLIC_API_URL=http://localhost:5000
 ```
 
 ### Running with Docker
