@@ -30,6 +30,10 @@ app.get("/health", (_, res) => {
   res.json({ service: "Gateway", status: "OK" });
 });
 
-app.listen(PORT, () => {
-  console.log(`Gateway running on ${PORT}`);
-});
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`Gateway running on ${PORT}`);
+  });
+}
+
+export default app;

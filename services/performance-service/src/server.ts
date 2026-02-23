@@ -16,6 +16,10 @@ app.get("/health", (_, res) => {
   res.json({ service: "Performance", status: "OK" });
 });
 
-app.listen(PORT, () => {
-  console.log(`Performance service running on ${PORT}`);
-});
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`Performance service running on ${PORT}`);
+  });
+}
+
+export default app;

@@ -6,6 +6,6 @@ export const connectDB = async () => {
     console.log("MongoDB Atlas connected");
   } catch (error) {
     console.error("MongoDB connection failed:", error);
-    process.exit(1);
+    throw error;
   }
 };
