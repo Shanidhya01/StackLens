@@ -1,58 +1,70 @@
 import axios from "axios";
 import { Scan } from "../models/scan.model";   // 🔥 ADD THIS
 
+const cleanBaseUrl = (value: string) => value.replace(/\/+$/, "");
+
+const getServiceBaseUrls = (envKey: string, dockerUrl: string, localUrl: string) => {
+  const fromEnv = process.env[envKey];
+  const candidates = [fromEnv, dockerUrl, localUrl]
+    .filter(Boolean)
+    .map((url) => cleanBaseUrl(url as string));
+
+  return Array.from(new Set(candidates));
+};
+
+const postWithFallback = async (baseUrls: string[], path: string, payload: unknown) => {
+  let lastError: any;
+
+  for (const baseUrl of baseUrls) {
+    try {
+      return await axios.post(`${baseUrl}${path}`, payload);
+    } catch (error) {
+      const err = error as any;
+      if (err?.response) {
+        throw err;
+      }
+      lastError = error;
+    }
+  }
+
+  throw lastError;
+};
+
 export const analyzeHandler = async (req: any, res: any) => {
-  const { url, userId, tier } = req.body;
-  const normalizedTier = tier === "premium" ? "premium" : "free";
-  const dailyLimit = normalizedTier === "premium" ? 200 : 10;
+  const { url, userId } = req.body;
+  const crawlerUrls = getServiceBaseUrls("CRAWLER_SERVICE_URL", "http://crawler:5001", "http://localhost:5001");
+  const detectionUrls = getServiceBaseUrls("DETECTION_SERVICE_URL", "http://detection:5002", "http://localhost:5002");
+  const performanceUrls = getServiceBaseUrls("PERFORMANCE_SERVICE_URL", "http://performance:5003", "http://localhost:5003");
+  const reportUrls = getServiceBaseUrls("REPORT_SERVICE_URL", "http://report:5004", "http://localhost:5004");
 
   if (!url) {
     return res.status(400).json({ error: "URL is required" });
   }
 
   try {
-    if (userId) {
-      const startOfDay = new Date();
-      startOfDay.setHours(0, 0, 0, 0);
-
-      const scansToday = await Scan.countDocuments({
-        userId,
-        scannedAt: { $gte: startOfDay }
-      });
-
-      if (scansToday >= dailyLimit) {
-        return res.status(429).json({
-          error: "Daily scan limit reached",
-          usage: {
-            tier: normalizedTier,
-            limit: dailyLimit,
-            used: scansToday,
-            remaining: 0
-          }
-        });
-      }
-    }
-
     // Step 1: Crawl
-    const crawlResponse = await axios.post("http://crawler:5001/crawl", {
+    const crawlResponse = await postWithFallback(crawlerUrls, "/crawl", {
       url,
     });
 
     // Step 2: Detection
-    const detectResponse = await axios.post(
-      "http://detection:5002/detect",
+    const detectResponse = await postWithFallback(
+      detectionUrls,
+      "/detect",
       crawlResponse.data,
     );
 
     // Step 3: Performance
-    const performanceResponse = await axios.post(
-      "http://performance:5003/analyze-performance",
+    const performanceResponse = await postWithFallback(
+      performanceUrls,
+      "/analyze-performance",
       crawlResponse.data,
     );
 
     // Step 4: Report
-    const reportResponse = await axios.post(
-      "http://report:5004/generate-report",
+    const reportResponse = await postWithFallback(
+      reportUrls,
+      "/generate-report",
       {
         detection: detectResponse.data,
         performance: performanceResponse.data,
@@ -60,47 +72,42 @@ export const analyzeHandler = async (req: any, res: any) => {
       },
     );
 
+    const rawPayload = {
+      detection: detectResponse.data,
+      performance: performanceResponse.data,
+      uiPatterns: crawlResponse.data.uiPatterns,
+      runtimeAnalysis: crawlResponse.data.runtimeAnalysis,
+      lighthouse: crawlResponse.data.lighthouse,
+    };
+
     // 🔥 SAVE TO MONGODB BEFORE RETURNING
-    await Scan.create({
-      url,
-      userId,
-      tier: normalizedTier,
-      report: reportResponse.data,
-    });
-
-    let usage = null;
-    if (userId) {
-      const startOfDay = new Date();
-      startOfDay.setHours(0, 0, 0, 0);
-      const used = await Scan.countDocuments({
+    try {
+      await Scan.create({
+        url,
         userId,
-        scannedAt: { $gte: startOfDay }
+        report: reportResponse.data,
+        raw: rawPayload,
       });
-
-      usage = {
-        tier: normalizedTier,
-        limit: dailyLimit,
-        used,
-        remaining: Math.max(dailyLimit - used, 0)
-      };
+    } catch (saveError) {
+      console.warn("Scan persistence failed:", (saveError as Error).message);
     }
 
     return res.json({
       report: reportResponse.data,
-      raw: {
-        detection: detectResponse.data,
-        performance: performanceResponse.data,
-        uiPatterns: crawlResponse.data.uiPatterns,
-        runtimeAnalysis: crawlResponse.data.runtimeAnalysis,
-        lighthouse: crawlResponse.data.lighthouse,
-      },
-      usage,
+      raw: rawPayload,
     });
 
   } catch (error: any) {
-    return res.status(500).json({
+    const downstreamDetails = error?.response?.data;
+    const normalizedDetails =
+      typeof downstreamDetails === "string"
+        ? downstreamDetails
+        : downstreamDetails?.message || downstreamDetails?.error || error.message;
+    const statusCode = error?.response?.status || 500;
+
+    return res.status(statusCode).json({
       error: "Analysis failed",
-      details: error.message,
+      details: normalizedDetails,
     });
   }
 };

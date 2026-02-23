@@ -69,10 +69,4 @@ export interface ScanResult {
       };
     };
   };
-  usage?: {
-    tier: "free" | "premium";
-    limit: number;
-    used: number;
-    remaining: number;
-  } | null;
 }

@@ -1,3 +1,5 @@
+import { useRouter } from "next/navigation";
+
 interface HistoryItem {
   _id: string;
   url: string;
@@ -97,6 +99,8 @@ function EmptyState() {
 }
 
 export default function HistoryList({ history }: Props) {
+  const router = useRouter();
+
   if (!history.length) return <EmptyState />;
 
   return (
@@ -163,6 +167,15 @@ export default function HistoryList({ history }: Props) {
             key={item._id}
             className="history-row"
             style={{ animationDelay: `${i * 40}ms`, opacity: 0, animation: `fade-up 0.35s ease ${i * 40}ms forwards` }}
+            onClick={() => router.push(`/histroy?id=${encodeURIComponent(item._id)}`)}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                router.push(`/histroy?id=${encodeURIComponent(item._id)}`);
+              }
+            }}
           >
             {/* URL + hosting */}
             <div className="flex items-center gap-2 min-w-0">

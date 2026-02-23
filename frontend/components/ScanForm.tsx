@@ -7,6 +7,13 @@ interface Props {
   loading: boolean;
 }
 
+const normalizeInputUrl = (value: string) => {
+  const trimmed = value.trim();
+  if (!trimmed) return "";
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  return `https://${trimmed}`;
+};
+
 export default function ScanForm({ onScan, loading }: Props) {
   const [url, setUrl] = useState("");
 
@@ -35,11 +42,11 @@ export default function ScanForm({ onScan, loading }: Props) {
             placeholder="enter any public URL to analyze..."
             value={url}
             onChange={(e) => setUrl(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && onScan(url)}
+            onKeyDown={(e) => e.key === "Enter" && onScan(normalizeInputUrl(url))}
           />
         </div>
         <button
-          onClick={() => onScan(url)}
+          onClick={() => onScan(normalizeInputUrl(url))}
           disabled={loading || !url.trim()}
           className="px-6 py-3 rounded-md text-sm font-semibold tracking-wide"
           style={{

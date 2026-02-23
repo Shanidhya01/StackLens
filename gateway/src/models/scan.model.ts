@@ -5,7 +5,8 @@ const scanSchema = new mongoose.Schema({
   userId: { type: String },
   tier: { type: String, enum: ["free", "premium"], default: "free" },
   scannedAt: { type: Date, default: Date.now },
-  report: { type: Object, required: true }
+  report: { type: Object, required: true },
+  raw: { type: Object }
 });
 
 export const Scan = mongoose.model("Scan", scanSchema);
