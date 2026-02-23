@@ -31,22 +31,50 @@ const toClientErrorMessage = (statusCode: number, value: unknown, serviceName?: 
   return typeof text === "string" ? text.slice(0, 300) : "Unknown upstream error";
 };
 
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const isTransientFailure = (error: any) => {
+  const status = error?.response?.status;
+  const code = error?.code;
+
+  if (status === 502 || status === 503 || status === 504) {
+    return true;
+  }
+
+  return code === "ECONNABORTED" || code === "ETIMEDOUT" || code === "ECONNRESET";
+};
+
 const callService = async (
   serviceName: string,
   baseUrl: string,
   path: string,
   payload: unknown,
+  timeoutMs = 60000,
 ) => {
-  try {
-    return await axios.post(`${baseUrl}${path}`, payload, { timeout: 45000 });
-  } catch (error: any) {
-    const statusCode = error?.response?.status || 500;
-    const downstreamDetails = error?.response?.data || error?.message;
-    const normalizedDetails = toClientErrorMessage(statusCode, downstreamDetails, serviceName);
-    const wrappedError: any = new Error(normalizedDetails);
-    wrappedError.statusCode = statusCode;
-    throw wrappedError;
+  const maxAttempts = 3;
+  const retryDelays = [1200, 2500];
+  let lastError: any;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      return await axios.post(`${baseUrl}${path}`, payload, { timeout: timeoutMs });
+    } catch (error: any) {
+      lastError = error;
+      const shouldRetry = attempt < maxAttempts && isTransientFailure(error);
+      if (shouldRetry) {
+        await sleep(retryDelays[attempt - 1] || 2500);
+        continue;
+      }
+      break;
+    }
   }
+
+  const statusCode = lastError?.response?.status || 500;
+  const downstreamDetails = lastError?.response?.data || lastError?.message;
+  const normalizedDetails = toClientErrorMessage(statusCode, downstreamDetails, serviceName);
+  const wrappedError: any = new Error(normalizedDetails);
+  wrappedError.statusCode = statusCode;
+  throw wrappedError;
 };
 
 export const analyzeHandler = async (req: any, res: any) => {
