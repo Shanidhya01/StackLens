@@ -5,6 +5,8 @@ const errorDiv = document.getElementById("error");
 const endpointEl = document.getElementById("endpoint");
 const pageMeta = document.getElementById("pageMeta");
 const pageUrlEl = document.getElementById("pageUrl");
+const statusText = document.querySelector(".status-text");
+const buttonText = document.querySelector(".button-text");
 
 const stripTrailingSlash = (value) => value.replace(/\/+$/, "");
 
@@ -52,13 +54,17 @@ const FRONTEND_BASE = getFrontendBaseUrl();
 const buildWebReportUrl = (url) => `${stripTrailingSlash(FRONTEND_BASE)}/scan?url=${encodeURIComponent(url || "")}`;
 
 if (endpointEl) {
-  endpointEl.textContent = API_BASE ? `Gateway: ${API_BASE}` : "Gateway is not configured in manifest host_permissions.";
+  endpointEl.textContent = API_BASE ? `Gateway: ${API_BASE}` : "Gateway not configured";
 }
 
 const setLoadingState = (isLoading) => {
   analyzeBtn.disabled = isLoading;
-  analyzeBtn.textContent = isLoading ? "Analyzing..." : "Analyze This Page";
+  buttonText.textContent = isLoading ? "Scanning" : "Initialize Scan";
   loadingDiv.classList.toggle("hidden", !isLoading);
+  
+  if (statusText) {
+    statusText.textContent = isLoading ? "Scanning" : "Ready";
+  }
 };
 
 const escapeHtml = (value) =>
@@ -290,9 +296,42 @@ const normalizeScanResult = (data, pageUrl) => {
   };
 };
 
-const renderSection = (title, items) => `
+const getRiskLevelColor = (level) => {
+  const colors = {
+    'Low': 'var(--cyber-accent)',
+    'Moderate': 'var(--cyber-warning)',
+    'High': 'var(--cyber-error)'
+  };
+  return colors[level] || 'var(--cyber-text-dim)';
+};
+
+const renderMetricBar = (label, value, max = 100) => {
+  const percentage = typeof value === 'number' && Number.isFinite(value) 
+    ? Math.min(100, Math.max(0, (value / max) * 100)) 
+    : 0;
+  
+  const getColor = (pct) => {
+    if (pct >= 80) return 'var(--cyber-accent)';
+    if (pct >= 50) return 'var(--cyber-warning)';
+    return 'var(--cyber-error)';
+  };
+  
+  return `
+    <div style="margin: 8px 0;">
+      <div style="display: flex; justify-content: space-between; margin-bottom: 4px; font-size: 10px;">
+        <span style="color: var(--cyber-text-dim); text-transform: uppercase;">${escapeHtml(label)}</span>
+        <span style="color: ${getColor(percentage)}; font-weight: 600;">${formatPercent(value)}</span>
+      </div>
+      <div style="height: 4px; background: var(--cyber-border); border-radius: 2px; overflow: hidden;">
+        <div style="height: 100%; width: ${percentage}%; background: ${getColor(percentage)}; transition: width 0.6s ease;"></div>
+      </div>
+    </div>
+  `;
+};
+
+const renderSection = (title, items, icon = '▸') => `
   <div class="section-card">
-    <h3>${escapeHtml(title)}</h3>
+    <h3>${icon} ${escapeHtml(title)}</h3>
     <ul>
       ${items.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}
     </ul>
@@ -322,36 +361,57 @@ const renderCategorizedSection = (title, groups) => `
 const renderResult = (result) => {
   const scoreText = result.score === "N/A" ? "N/A" : `${result.score}`;
   const webReportUrl = buildWebReportUrl(result.url);
-  const topRisks = result.riskIndicators.filter(Boolean).slice(0, 2);
+  const topRisks = result.riskIndicators.filter(Boolean).slice(0, 3);
   const riskList = topRisks.length ? topRisks : ["No major risk indicators detected"];
 
   resultDiv.innerHTML = `
     <div class="summary-card">
-      <p><strong>Framework:</strong> ${escapeHtml(result.framework)}</p>
-      <p><strong>Hosting:</strong> ${escapeHtml(result.hosting)}</p>
-      <p><strong>Overall Score:</strong> ${escapeHtml(scoreText)}</p>
+      <p><strong>Framework</strong> <span>${escapeHtml(result.framework)}</span></p>
+      <p><strong>Hosting</strong> <span>${escapeHtml(result.hosting)}</span></p>
+      <p><strong>Overall Score</strong> <span>${escapeHtml(scoreText)}</span></p>
     </div>
 
     <div class="badge-row">
       ${result.badges.map((badge) => `<span class="tag">${escapeHtml(badge)}</span>`).join("")}
     </div>
 
-    ${renderSection("Quick Insights", [
-      `Conclusion: ${result.renderingConclusion}`,
-      `Rendering Confidence: ${formatPercent(result.renderingConfidence)}`,
-      `Performance Score: ${formatPercent(result.confidenceBreakdown.performance)}`,
-      `JavaScript Files: ${result.assets.jsFileCount}`,
-      `External Domains: ${result.assets.externalDomainCount}`
-    ])}
+    <div class="section-card">
+      <h3>Confidence Metrics</h3>
+      ${renderMetricBar('Architecture', result.confidenceBreakdown.architecture)}
+      ${renderMetricBar('Infrastructure', result.confidenceBreakdown.infrastructure)}
+      ${renderMetricBar('Rendering', result.confidenceBreakdown.rendering)}
+      ${renderMetricBar('Performance', result.confidenceBreakdown.performance)}
+    </div>
 
-    ${renderSection("Top Risks", riskList)}
+    ${renderSection("Quick Insights", [
+      `Rendering: ${result.renderingConclusion}`,
+      `JS Risk Level: ${result.assets.jsRiskLevel}`,
+      `Dependency Exposure: ${result.assets.dependencyExposure}`,
+      `JavaScript Files: ${result.assets.jsFileCount}`,
+      `External Domains: ${result.assets.externalDomainCount}`,
+      `CDN: ${result.infraSignals.cdnDetected ? 'Detected' : 'Not detected'}`
+    ], '⚡')}
+
+    ${renderSection("Risk Assessment", riskList, '⚠')}
+
+    ${renderCategorizedSection("Detected Technologies", result.technologies)}
 
     <div class="section-card">
-      <h3>Need Full Detail?</h3>
-      <p class="cta-note">Open StackLens Web for complete analysis, categorized technologies, dependency map, and full report context.</p>
-      <a class="cta-link" href="${escapeHtml(webReportUrl)}" target="_blank" rel="noopener noreferrer">View Full Report on Website</a>
+      <h3>🔍 Full Analysis</h3>
+      <p class="cta-note">View complete dependency map, performance metrics, security headers, and detailed technology breakdown on the web dashboard.</p>
+      <a class="cta-link" href="${escapeHtml(webReportUrl)}" target="_blank" rel="noopener noreferrer">Open Full Report</a>
     </div>
   `;
+  
+  // Animate metric bars
+  setTimeout(() => {
+    const bars = resultDiv.querySelectorAll('[style*="width:"]');
+    bars.forEach(bar => {
+      const width = bar.style.width;
+      bar.style.width = '0%';
+      setTimeout(() => bar.style.width = width, 50);
+    });
+  }, 100);
 };
 
 analyzeBtn.addEventListener("click", async () => {
@@ -409,7 +469,7 @@ analyzeBtn.addEventListener("click", async () => {
 
   } catch (err) {
     const message = err?.message || "Failed to analyze this page.";
-    errorDiv.textContent = message;
+    errorDiv.textContent = `ERROR: ${message}`;
     errorDiv.classList.remove("hidden");
   } finally {
     setLoadingState(false);
