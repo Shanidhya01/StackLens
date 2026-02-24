@@ -113,6 +113,29 @@ button:disabled {
   color: #c9d1d9;
 }
 
+.cta-note {
+  margin: 0 0 10px;
+  font-size: 12px;
+  color: #8b949e;
+  line-height: 1.35;
+}
+
+.cta-link {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 600;
+  color: #58a6ff;
+  text-decoration: none;
+  border: 1px solid rgba(88, 166, 255, 0.45);
+  border-radius: 8px;
+  padding: 7px 10px;
+  background: rgba(88, 166, 255, 0.12);
+}
+
+.cta-link:hover {
+  background: rgba(88, 166, 255, 0.2);
+}
+
 .group-block + .group-block {
   margin-top: 8px;
 }

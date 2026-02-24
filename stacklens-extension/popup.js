@@ -20,6 +20,36 @@ const getGatewayBaseUrl = () => {
 };
 
 const API_BASE = getGatewayBaseUrl();
+const FRONTEND_DEFAULT = "https://stack-lens-sk.vercel.app";
+
+const getFrontendBaseUrl = () => {
+  if (!API_BASE) {
+    return FRONTEND_DEFAULT;
+  }
+
+  try {
+    const parsed = new URL(API_BASE);
+    if (parsed.hostname === "localhost" || parsed.hostname === "127.0.0.1") {
+      return "http://localhost:3000";
+    }
+
+    if (parsed.hostname === "stack-lens-gateway.vercel.app") {
+      return FRONTEND_DEFAULT;
+    }
+
+    if (parsed.hostname.endsWith(".vercel.app") && parsed.hostname.includes("-gateway")) {
+      return `${parsed.protocol}//${parsed.hostname.replace("-gateway", "")}`;
+    }
+
+    return `${parsed.protocol}//${parsed.hostname}`;
+  } catch {
+    return FRONTEND_DEFAULT;
+  }
+};
+
+const FRONTEND_BASE = getFrontendBaseUrl();
+
+const buildWebReportUrl = (url) => `${stripTrailingSlash(FRONTEND_BASE)}/scan?url=${encodeURIComponent(url || "")}`;
 
 if (endpointEl) {
   endpointEl.textContent = API_BASE ? `Gateway: ${API_BASE}` : "Gateway is not configured in manifest host_permissions.";
@@ -289,33 +319,11 @@ const renderCategorizedSection = (title, groups) => `
   </div>
 `;
 
-const renderComparisonSection = (current, previous) => {
-  if (!previous) {
-    return renderSection("Last Scan Comparison", [
-      "No previous local scan available",
-      "Run another scan to see deltas"
-    ]);
-  }
-
-  const jsDelta = (current.assets?.jsFileCount || 0) - (previous.assets?.jsFileCount || 0);
-  const perfDelta =
-    typeof current.confidenceBreakdown?.performance === "number" && typeof previous.confidenceBreakdown?.performance === "number"
-      ? current.confidenceBreakdown.performance - previous.confidenceBreakdown.performance
-      : null;
-
-  const hostingUnchanged = String(current.hosting || "") === String(previous.hosting || "");
-
-  return renderSection("Last Scan Comparison", [
-    `JavaScript file count changed by ${formatSigned(jsDelta)}`,
-    hostingUnchanged ? "Hosting unchanged" : `Hosting changed to ${current.hosting}`,
-    perfDelta === null
-      ? "Performance score delta unavailable"
-      : `Performance score changed by ${formatSigned(perfDelta)}`
-  ]);
-};
-
-const renderResult = (result, previousScan) => {
+const renderResult = (result) => {
   const scoreText = result.score === "N/A" ? "N/A" : `${result.score}`;
+  const webReportUrl = buildWebReportUrl(result.url);
+  const topRisks = result.riskIndicators.filter(Boolean).slice(0, 2);
+  const riskList = topRisks.length ? topRisks : ["No major risk indicators detected"];
 
   resultDiv.innerHTML = `
     <div class="summary-card">
@@ -328,65 +336,23 @@ const renderResult = (result, previousScan) => {
       ${result.badges.map((badge) => `<span class="tag">${escapeHtml(badge)}</span>`).join("")}
     </div>
 
-    ${renderSection("Rendering Analysis", [
-      ...result.renderingReasonLines,
+    ${renderSection("Quick Insights", [
       `Conclusion: ${result.renderingConclusion}`,
-      `Confidence: ${formatPercent(result.renderingConfidence)}`
-    ])}
-
-    ${renderSection("Infrastructure Signals", [
-      `Server Header: ${result.infraSignals.serverHeader}`,
-      `CDN: ${result.infraSignals.cdnDetected ? "Detected" : "Not detected"}`,
-      `Cache-Control: ${result.infraSignals.cacheControl}`,
-      `Strict-Transport-Security: ${result.infraSignals.hstsEnabled ? "enabled" : "not detected"}`,
-      `Content-Encoding: ${result.infraSignals.contentEncoding}`
-    ])}
-
-    ${renderSection("Asset Breakdown", [
-      `HTML Size: ${formatBytesToKb(result.assets.htmlSize)}`,
+      `Rendering Confidence: ${formatPercent(result.renderingConfidence)}`,
+      `Performance Score: ${formatPercent(result.confidenceBreakdown.performance)}`,
       `JavaScript Files: ${result.assets.jsFileCount}`,
-      `CSS Files: ${result.assets.cssFileCount}`,
-      `Third-party Scripts: ${result.assets.thirdPartyScriptCount}`,
-      `External Domains: ${result.assets.externalDomainCount}`,
-      `JS Risk Level: ${result.assets.jsRiskLevel}`,
-      `Third-party Dependency Exposure: ${result.assets.dependencyExposure}`
+      `External Domains: ${result.assets.externalDomainCount}`
     ])}
 
-    ${renderSection("Score Breakdown", [
-      `Architecture Confidence: ${formatPercent(result.confidenceBreakdown.architecture)}`,
-      `Infrastructure Confidence: ${formatPercent(result.confidenceBreakdown.infrastructure)}`,
-      `Rendering Confidence: ${formatPercent(result.confidenceBreakdown.rendering)}`,
-      `Performance Score: ${formatPercent(result.confidenceBreakdown.performance)}`
-    ])}
+    ${renderSection("Top Risks", riskList)}
 
-    ${renderSection("Risk Indicators", result.riskIndicators)}
-
-    ${renderCategorizedSection("Detected Technologies", result.technologies)}
-
-    ${renderComparisonSection(result, previousScan)}
-
-    ${renderSection("External Dependencies", result.externalDomains.length ? result.externalDomains : ["No external domains detected"])}
-
-    ${renderSection("Conclusion Evidence", [
-      result.whyConclusion.reactLabel,
-      ...result.whyConclusion.reactReasons,
-      result.whyConclusion.nextLabel,
-      ...result.whyConclusion.nextReasons
-    ])}
+    <div class="section-card">
+      <h3>Need Full Detail?</h3>
+      <p class="cta-note">Open StackLens Web for complete analysis, categorized technologies, dependency map, and full report context.</p>
+      <a class="cta-link" href="${escapeHtml(webReportUrl)}" target="_blank" rel="noopener noreferrer">View Full Report on Website</a>
+    </div>
   `;
 };
-
-const loadPreviousLocalScan = () =>
-  new Promise((resolve) => {
-    chrome.storage.local.get(["stacklensLastScan"], (items) => {
-      resolve(items?.stacklensLastScan || null);
-    });
-  });
-
-const storeLatestLocalScan = (scan) =>
-  new Promise((resolve) => {
-    chrome.storage.local.set({ stacklensLastScan: scan }, () => resolve());
-  });
 
 analyzeBtn.addEventListener("click", async () => {
   errorDiv.classList.add("hidden");
@@ -434,12 +400,10 @@ analyzeBtn.addEventListener("click", async () => {
       throw new Error(details);
     }
 
-    const previousScan = await loadPreviousLocalScan();
     const data = await response.json();
     const result = normalizeScanResult(data, url);
 
-    renderResult(result, previousScan);
-    await storeLatestLocalScan(result);
+    renderResult(result);
 
     resultDiv.classList.remove("hidden");
 
