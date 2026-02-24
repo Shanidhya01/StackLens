@@ -33,11 +33,23 @@ export interface Report {
 export interface ScanResult {
   report: Report;
   raw: {
+    crawl?: {
+      statusCode?: number;
+      headers?: Record<string, string>;
+      scripts?: string[];
+      meta?: string[];
+      links?: string[];
+      htmlSize?: number;
+      crawlDurationMs?: number;
+    };
     uiPatterns: UIPatterns;
     runtimeAnalysis?: {
       executedJavaScript: boolean;
+      dynamicFrameworkHints?: string[];
       hydrationPatterns: string[];
       domMutationCount: number;
+      staticDomNodes?: number;
+      runtimeDomNodes?: number;
       renderTimingMs: {
         domContentLoaded: number;
         load: number;
@@ -61,6 +73,9 @@ export interface ScanResult {
     };
     performance?: {
       performanceScore: number;
+      payloadCategory?: string;
+      compressionEnabled?: boolean;
+      thirdPartyRisk?: string;
       lighthouse?: {
         performance: number;
         seo: number;

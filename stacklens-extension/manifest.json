@@ -3,9 +3,9 @@
   "name": "StackLens",
   "version": "1.0",
   "description": "Analyze any website instantly using StackLens.",
-  "permissions": ["activeTab", "scripting"],
+  "permissions": ["activeTab", "scripting", "storage"],
   "host_permissions": [
-    "https://stacklens-gateway.onrender.com/*"
+    "https://stack-lens-gateway.vercel.app/*"
   ],
   "action": {
     "default_popup": "popup.html",

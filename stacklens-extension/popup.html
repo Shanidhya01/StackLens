@@ -1,25 +1,30 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>StackLens</title>
   <link rel="stylesheet" href="popup.css" />
 </head>
 <body>
   <div class="container">
     <h2>StackLens</h2>
+    <p class="subtext">Instant stack scan for the active tab</p>
+
+    <div id="pageMeta" class="page-meta hidden">
+      <span class="meta-label">Page</span>
+      <span id="pageUrl" class="meta-value"></span>
+    </div>
 
     <button id="analyzeBtn">Analyze This Page</button>
 
-    <div id="loading" class="hidden">Analyzing...</div>
+    <div id="loading" class="hidden">Analyzing page and gathering signals...</div>
 
-    <div id="result" class="hidden">
-      <p><strong>Framework:</strong> <span id="framework"></span></p>
-      <p><strong>Hosting:</strong> <span id="hosting"></span></p>
-      <p><strong>Score:</strong> <span id="score"></span></p>
-    </div>
+    <div id="result" class="hidden"></div>
 
     <div id="error" class="hidden"></div>
+
+    <p id="endpoint" class="endpoint"></p>
   </div>
 
   <script src="popup.js"></script>

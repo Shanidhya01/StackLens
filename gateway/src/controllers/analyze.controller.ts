@@ -172,6 +172,15 @@ export const analyzeHandler = async (req: any, res: any) => {
     );
 
     const rawPayload = {
+      crawl: {
+        statusCode: crawlResponse.data?.statusCode,
+        headers: crawlResponse.data?.headers,
+        scripts: crawlResponse.data?.scripts,
+        meta: crawlResponse.data?.meta,
+        links: crawlResponse.data?.links,
+        htmlSize: crawlResponse.data?.htmlSize,
+        crawlDurationMs: crawlResponse.data?.crawlDurationMs,
+      },
       detection: detectResponse.data,
       performance: performanceResponse.data,
       uiPatterns: crawlResponse.data.uiPatterns,

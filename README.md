@@ -46,6 +46,10 @@ StackLens is a full-stack web application that analyzes any website's technology
 - **Performance Auditing** — Blends heuristic payload/compression/third-party analysis with real Lighthouse scores for a composite performance grade.
 - **Runtime Analysis** — Launches a headless Puppeteer browser to inspect the live DOM, measure paint timings, and detect dynamic framework hints.
 - **Lighthouse Integration** — Runs Google Lighthouse audits for Performance, SEO, Accessibility, and Best Practices scoring.
+- **Evidence-Based Breakdown UI** — Frontend and extension now display inference reasoning, infrastructure signals, asset audits, confidence subscores, risk indicators, and categorized technology output.
+- **Rendering & Infrastructure Tags** — Visual badges like `CSR`, `CDN`, `Heavy JS`, and `SPA` are shown for quick triage.
+- **External Dependency Mapping** — Surfaces unique third-party domains and script exposure to highlight network and supply-chain footprint.
+- **Scan Comparison Insights** — Includes a last-scan delta summary (JS change, hosting change, performance change) in the UI.
 - **UI Pattern Detection** — Identifies common UI elements: navbars, footers, hero sections, forms, buttons, and SPA behavior.
 - **Scan History** — Persists complete scan results (report + raw data) in MongoDB with per-user history and detail retrieval.
 - **Side-by-Side Comparison** — Compare the tech stacks and performance of two websites simultaneously.
@@ -540,11 +544,13 @@ Returns service health status.
 
 ### Key UI Components
 
-- **ReportCard** — Displays architecture grade, performance grade, overall score, Lighthouse metrics (4-column grid), UI patterns checklist, detected technologies, and a PDF export button.
+- **ReportCard** — Displays architecture/performance grades, overall score, rendering analysis, infrastructure signals, asset breakdown, confidence subscores, risk indicators, categorized technologies, external dependencies, comparison deltas, explanatory reasoning, and PDF export.
 - **RawPanel** — Syntax-highlighted JSON viewer with line numbers, copy-to-clipboard, and download-as-JSON.
 - **HistoryList** — Responsive table with score ring charts, render mode badges, relative timestamps, and click-to-navigate.
 - **ScanForm** — URL input with automatic `https://` normalization.
 - **ScoreBadge** — Color-coded score chip (green >80, yellow >60, red ≤60).
+
+> **Frontend Note:** The dedicated Lighthouse metric grid in `ReportCard` is intentionally hidden until full real-data integration and presentation are finalized.
 
 ---
 
@@ -598,12 +604,12 @@ Human-readable report generation:
 
 ## Browser Extension
 
-A lightweight Chrome extension (Manifest V3) that lets you analyze any website directly from the toolbar:
+A lightweight Chrome extension (Manifest V3) that lets you analyze any website directly from the toolbar with deep, evidence-driven output:
 
 1. Navigate to any webpage
 2. Click the StackLens extension icon
 3. Click **"Analyze This Page"**
-4. View the detected framework, hosting, and overall score in the popup
+4. Review rendering analysis, infrastructure signals, asset breakdown, score breakdown, risk indicators, categorized technologies, scan comparison, dependency domains, and explanation details in the popup
 
 ### Installation
 

@@ -1,51 +1,160 @@
 body {
-  width: 320px;
-  font-family: Arial, sans-serif;
+  width: 420px;
+  font-family: Inter, Segoe UI, Arial, sans-serif;
   margin: 0;
-  padding: 12px;
-  background: #f4f4f4;
+  padding: 14px;
+  background: #0d1117;
+  color: #e6edf3;
 }
 
 .container {
-  text-align: center;
+  border: 1px solid #30363d;
+  border-radius: 10px;
+  background: #161b22;
+  padding: 14px;
 }
 
 h2 {
-  margin-bottom: 12px;
+  margin: 0;
+  font-size: 20px;
+  line-height: 1.2;
+}
+
+.subtext {
+  margin: 6px 0 12px;
+  font-size: 12px;
+  color: #8b949e;
+}
+
+.page-meta {
+  margin: 0 0 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #0d1117;
+  border: 1px solid #30363d;
+}
+
+.meta-label {
+  display: block;
+  font-size: 11px;
+  color: #8b949e;
+  margin-bottom: 3px;
+}
+
+.meta-value {
+  display: block;
+  font-size: 12px;
+  color: #c9d1d9;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 button {
   width: 100%;
-  padding: 8px;
-  background: black;
-  color: white;
+  padding: 10px;
+  background: #238636;
+  color: #fff;
   border: none;
-  border-radius: 6px;
+  border-radius: 8px;
   cursor: pointer;
-  font-weight: bold;
+  font-weight: 600;
 }
 
 button:hover {
-  opacity: 0.9;
+  background: #2ea043;
+}
+
+button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
 }
 
 #loading {
   margin-top: 12px;
-  font-size: 13px;
+  font-size: 12px;
+  color: #8b949e;
 }
 
 #result {
   margin-top: 12px;
   font-size: 13px;
-  background: white;
+  max-height: 520px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.summary-card,
+.section-card {
+  background: #0d1117;
+  border: 1px solid #30363d;
+  border-radius: 8px;
   padding: 10px;
-  border-radius: 6px;
+  margin-bottom: 10px;
+}
+
+.summary-card p {
+  margin: 6px 0;
+}
+
+.section-card h3 {
+  margin: 0 0 8px;
+  font-size: 13px;
+  color: #d2a8ff;
+}
+
+.section-card ul {
+  margin: 0;
+  padding-left: 16px;
+}
+
+.section-card li {
+  margin: 4px 0;
+  color: #c9d1d9;
+}
+
+.group-block + .group-block {
+  margin-top: 8px;
+}
+
+.group-title {
+  margin: 0 0 4px;
+  color: #8b949e;
+  font-size: 12px;
+}
+
+.badge-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.tag {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 600;
+  background: rgba(88, 166, 255, 0.2);
+  border: 1px solid rgba(88, 166, 255, 0.45);
+  color: #c9d1d9;
+  padding: 3px 7px;
+  border-radius: 999px;
 }
 
 #error {
   margin-top: 12px;
-  color: red;
+  color: #ff7b72;
   font-size: 12px;
+  background: rgba(248, 81, 73, 0.12);
+  border: 1px solid rgba(248, 81, 73, 0.3);
+  border-radius: 8px;
+  padding: 8px;
+}
+
+.endpoint {
+  margin: 10px 0 0;
+  font-size: 11px;
+  color: #8b949e;
 }
 
 .hidden {
