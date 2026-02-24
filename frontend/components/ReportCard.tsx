@@ -188,13 +188,17 @@ export default function ReportCard({ data }: Props) {
         raw.uiPatterns?.isSPA ? "SPA" : "MPA",
       ],
       whyConclusion: {
+        reactLabel: reactDetected ? "React evidence:" : "React evidence (weak):",
         react: [
-          reactDetected ? "React framework signal/candidate present" : "React signal not dominant",
-          scripts.length > 0 ? "JavaScript bundle references present" : "No script bundle references found",
+          reactDetected ? "Framework candidates include React" : "React is not a dominant framework candidate",
+          scripts.length > 0 ? "JavaScript bundle references are present" : "No JavaScript bundle references found",
         ],
+        nextLabel: nextDetected || nextMarkerDetected ? "Next.js evidence:" : "Next.js rejection evidence:",
         next: [
-          nextMarkerDetected ? "__NEXT hydration marker detected" : "No __NEXT_DATA__ / next-hydration payload",
-          nextDetected ? "Next.js candidate signal present" : "No strong Next.js candidate signal",
+          nextDetected ? "Framework candidates include Next.js" : "No strong Next.js framework candidate",
+          nextMarkerDetected
+            ? "__NEXT_DATA__ / next-hydration marker found"
+            : "No __NEXT_DATA__ / next-hydration marker found",
         ],
       },
       snapshot: {
@@ -445,13 +449,13 @@ export default function ReportCard({ data }: Props) {
       </div>
 
       <div>
-        <h3 className="font-semibold mb-3 text-white">Why This Conclusion?</h3>
+        <h3 className="font-semibold mb-3 text-white">Conclusion Evidence</h3>
         <ul className="list-disc ml-5 space-y-1.5 text-sm" style={{ color: "rgba(255,255,255,0.75)" }}>
-          <li>React detected via:</li>
+          <li>{derived.whyConclusion.reactLabel}</li>
           {derived.whyConclusion.react.map((line) => (
             <li key={line}>{line}</li>
           ))}
-          <li>Next.js not detected via:</li>
+          <li>{derived.whyConclusion.nextLabel}</li>
           {derived.whyConclusion.next.map((line) => (
             <li key={line}>{line}</li>
           ))}

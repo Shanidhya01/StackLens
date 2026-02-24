@@ -243,13 +243,17 @@ const normalizeScanResult = (data, pageUrl) => {
     riskIndicators,
     technologies: categorizedTechnologies,
     whyConclusion: {
+      reactLabel: reactDetected ? "React evidence:" : "React evidence (weak):",
       reactReasons: [
-        reactDetected ? "React framework signal/candidate present" : "React signal not dominant",
-        jsFileCount > 0 ? "JavaScript bundle references present" : "No script bundle references found"
+        reactDetected ? "Framework candidates include React" : "React is not a dominant framework candidate",
+        jsFileCount > 0 ? "JavaScript bundle references are present" : "No JavaScript bundle references found"
       ],
+      nextLabel: nextDetected || hasNextHydrationMarker ? "Next.js evidence:" : "Next.js rejection evidence:",
       nextReasons: [
-        hasNextHydrationMarker ? "__NEXT hydration marker detected" : "No __NEXT_DATA__ / next-hydration payload",
-        nextDetected ? "Next.js candidate signal present" : "No strong Next.js candidate signal"
+        nextDetected ? "Framework candidates include Next.js" : "No strong Next.js framework candidate",
+        hasNextHydrationMarker
+          ? "__NEXT_DATA__ / next-hydration marker found"
+          : "No __NEXT_DATA__ / next-hydration marker found"
       ]
     },
     externalDomains
@@ -363,10 +367,10 @@ const renderResult = (result, previousScan) => {
 
     ${renderSection("External Dependencies", result.externalDomains.length ? result.externalDomains : ["No external domains detected"])}
 
-    ${renderSection("Why This Conclusion?", [
-      "React detected via:",
+    ${renderSection("Conclusion Evidence", [
+      result.whyConclusion.reactLabel,
       ...result.whyConclusion.reactReasons,
-      "Next.js not detected via:",
+      result.whyConclusion.nextLabel,
       ...result.whyConclusion.nextReasons
     ])}
   `;
