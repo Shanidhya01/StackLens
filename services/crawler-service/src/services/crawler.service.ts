@@ -50,26 +50,95 @@ const isTlsCertificateError = (error: any) => {
   );
 };
 
+const BROWSER_HEADERS: Record<string, string> = {
+  "User-Agent":
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+  Accept:
+    "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+  "Accept-Language": "en-US,en;q=0.9",
+  "Accept-Encoding": "gzip, deflate, br",
+  "Cache-Control": "no-cache",
+  Pragma: "no-cache",
+  "Sec-Fetch-Dest": "document",
+  "Sec-Fetch-Mode": "navigate",
+  "Sec-Fetch-Site": "none",
+  "Sec-Fetch-User": "?1",
+  "Upgrade-Insecure-Requests": "1",
+};
+
+const isBlockedError = (error: any) => {
+  const status = error?.response?.status;
+  return status === 403 || status === 429;
+};
+
+const fetchWithPuppeteerFallback = async (
+  url: string
+): Promise<{ data: string; status: number; headers: Record<string, string> }> => {
+  const browser = await puppeteer.launch({
+    headless: true,
+    args: [
+      "--no-sandbox",
+      "--disable-setuid-sandbox",
+      "--disable-dev-shm-usage",
+      "--ignore-certificate-errors",
+    ],
+  });
+
+  try {
+    const page = await browser.newPage();
+    await page.setUserAgent(BROWSER_HEADERS["User-Agent"]);
+    await page.setExtraHTTPHeaders({
+      "Accept-Language": "en-US,en;q=0.9",
+    });
+
+    const response = await page.goto(url, {
+      waitUntil: "networkidle2",
+      timeout: 45000,
+    });
+
+    const status = response?.status() ?? 200;
+    const html = await page.content();
+    const rawHeaders = response?.headers() ?? {};
+    const headers: Record<string, string> = {};
+    for (const [key, value] of Object.entries(rawHeaders)) {
+      headers[key.toLowerCase()] = String(value);
+    }
+
+    return { data: html, status, headers };
+  } finally {
+    await browser.close();
+  }
+};
+
 const fetchHtmlWithTlsFallback = async (url: string) => {
   try {
-    return await axios.get(url, {
-      headers: {
-        "User-Agent":
-          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-      },
-    });
+    return await axios.get(url, { headers: BROWSER_HEADERS });
   } catch (error: any) {
+    if (isBlockedError(error)) {
+      console.info(
+        `Axios blocked (${error?.response?.status}) for ${url}, retrying with Puppeteer…`
+      );
+      return fetchWithPuppeteerFallback(url);
+    }
+
     if (!isTlsCertificateError(error)) {
       throw error;
     }
 
-    return axios.get(url, {
-      headers: {
-        "User-Agent":
-          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-      },
-      httpsAgent: new https.Agent({ rejectUnauthorized: false }),
-    });
+    try {
+      return await axios.get(url, {
+        headers: BROWSER_HEADERS,
+        httpsAgent: new https.Agent({ rejectUnauthorized: false }),
+      });
+    } catch (tlsRetryError: any) {
+      if (isBlockedError(tlsRetryError)) {
+        console.info(
+          `Axios TLS-fallback blocked (${tlsRetryError?.response?.status}) for ${url}, retrying with Puppeteer…`
+        );
+        return fetchWithPuppeteerFallback(url);
+      }
+      throw tlsRetryError;
+    }
   }
 };
 

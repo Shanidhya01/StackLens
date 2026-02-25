@@ -468,7 +468,14 @@ analyzeBtn.addEventListener("click", async () => {
     resultDiv.classList.remove("hidden");
 
   } catch (err) {
-    const message = err?.message || "Failed to analyze this page.";
+    let message = err?.message || "Failed to analyze this page.";
+
+    if (message.includes("403")) {
+      message = "The target website blocked the scan request (403 Forbidden). This can happen with sites that have aggressive bot protection. The scan may still succeed — please retry.";
+    } else if (message.includes("429")) {
+      message = "The target website is rate-limiting requests (429). Please wait a moment and try again.";
+    }
+
     errorDiv.textContent = `ERROR: ${message}`;
     errorDiv.classList.remove("hidden");
   } finally {
