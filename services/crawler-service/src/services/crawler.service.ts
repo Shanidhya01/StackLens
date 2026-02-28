@@ -71,6 +71,62 @@ const isBlockedError = (error: any) => {
   return status === 403 || status === 429;
 };
 
+const isRetryableFetchError = (error: any) => {
+  const code = String(error?.code || "").toUpperCase();
+  const message = String(error?.message || "").toLowerCase();
+  const status = error?.response?.status;
+
+  if (status === 403 || status === 429) {
+    return true;
+  }
+
+  return (
+    code === "ENOTFOUND" ||
+    code === "EAI_AGAIN" ||
+    code === "ECONNREFUSED" ||
+    code === "ECONNRESET" ||
+    code === "ETIMEDOUT" ||
+    code === "ECONNABORTED" ||
+    message.includes("socket hang up") ||
+    message.includes("network error") ||
+    message.includes("timeout")
+  );
+};
+
+const buildUrlCandidates = (rawUrl: string): string[] => {
+  let parsed: URL;
+  try {
+    parsed = new URL(rawUrl);
+  } catch {
+    return [rawUrl];
+  }
+
+  const host = parsed.hostname;
+  const protocol = parsed.protocol;
+  const alternateProtocol = protocol === "https:" ? "http:" : "https:";
+  const hostWithoutWww = host.replace(/^www\./i, "");
+  const hostWithWww = host.startsWith("www.") ? host : `www.${host}`;
+  const includeWwwVariant = hostWithoutWww.split(".").length >= 2 && !host.startsWith("www.");
+
+  const candidates = new Set<string>([parsed.toString()]);
+
+  const altProtocolUrl = new URL(parsed.toString());
+  altProtocolUrl.protocol = alternateProtocol;
+  candidates.add(altProtocolUrl.toString());
+
+  if (includeWwwVariant) {
+    const withWww = new URL(parsed.toString());
+    withWww.hostname = hostWithWww;
+    candidates.add(withWww.toString());
+
+    const withWwwAltProtocol = new URL(withWww.toString());
+    withWwwAltProtocol.protocol = alternateProtocol;
+    candidates.add(withWwwAltProtocol.toString());
+  }
+
+  return Array.from(candidates);
+};
+
 const fetchWithPuppeteerFallback = async (
   url: string
 ): Promise<{ data: string; status: number; headers: Record<string, string> }> => {
@@ -255,8 +311,29 @@ const runLighthouseAudit = async (url: string): Promise<LighthouseScores> => {
 
 export const crawlWebsite = async (url: string) => {
   const startedAt = Date.now();
+  const candidates = buildUrlCandidates(url);
+  let response:
+    | { data: string; status: number; headers: Record<string, unknown> }
+    | undefined;
+  let finalUrl = url;
+  let lastError: any;
 
-  const response = await fetchHtmlWithTlsFallback(url);
+  for (const candidate of candidates) {
+    try {
+      response = await fetchHtmlWithTlsFallback(candidate);
+      finalUrl = candidate;
+      break;
+    } catch (error: any) {
+      lastError = error;
+      if (!isRetryableFetchError(error)) {
+        throw error;
+      }
+    }
+  }
+
+  if (!response) {
+    throw lastError || new Error("Failed to fetch website");
+  }
 
   const html = response.data;
 
@@ -303,6 +380,7 @@ export const crawlWebsite = async (url: string) => {
 
   return {
     statusCode: response.status,
+    finalUrl,
     headers: normalizedHeaders,
     htmlSize: html.length,
     crawlDurationMs: Date.now() - startedAt,

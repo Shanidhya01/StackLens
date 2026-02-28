@@ -147,7 +147,7 @@ export default function ComparePage() {
             )}
             {(leftFramework || rightFramework || leftHosting || rightHosting) && (
               <div>
-                Stack diff: {leftFramework || "Unknown"} / {leftHosting || "Unknown"} vs {rightFramework || "Unknown"} / {rightHosting || "Unknown"}.
+                Stack diff: {leftFramework || "Unclassified"} / {leftHosting || "Undetected"} vs {rightFramework || "Unclassified"} / {rightHosting || "Undetected"}.
               </div>
             )}
           </div>

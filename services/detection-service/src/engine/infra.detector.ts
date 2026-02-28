@@ -2,7 +2,7 @@ import { Signals } from "./signalExtractor";
 
 export const detectFromSignals = (signals: Signals) => {
 
-  let framework = "Unknown";
+  let framework = "Unclassified";
   let confidence = 50;
 
   if (
@@ -16,7 +16,7 @@ export const detectFromSignals = (signals: Signals) => {
     confidence += 20;
   }
 
-  let hosting = "Unknown";
+  let hosting = "Undetected";
 
   if (signals.infraSignals.hasVercelHeader) {
     hosting = "Vercel";

@@ -22,9 +22,9 @@ export default function ReportCard({ data }: Props) {
 
   const derived = useMemo(() => {
     const detection = raw.detection || {
-      framework: "Unknown",
-      hosting: "Unknown",
-      rendering: "Unknown",
+      framework: "Unclassified",
+      hosting: "Undetected",
+      rendering: "Rendering pattern unavailable",
       confidence: 0,
       frameworkCandidates: [],
       hostingCandidates: [],
@@ -57,7 +57,7 @@ export default function ReportCard({ data }: Props) {
     const thirdPartyScriptCount = scripts.filter((entry) => /^https?:\/\//i.test(entry)).length;
     const cssFileCount = links.filter((entry) => /\.css(\?|$)/i.test(entry)).length;
 
-    const rendering = String(detection.rendering || "Unknown");
+    const rendering = String(detection.rendering || "Rendering pattern unavailable");
     const hydrationPatterns = runtime.hydrationPatterns || [];
     const domMutationCount = runtime.domMutationCount || 0;
     const nextMarkerDetected = hydrationPatterns.some((pattern) =>
@@ -160,8 +160,8 @@ export default function ReportCard({ data }: Props) {
     };
 
     return {
-      framework: detection.framework || "Unknown",
-      hosting: detection.hosting || "Unknown",
+      framework: detection.framework || "Unclassified",
+      hosting: detection.hosting || "Undetected",
       score: report.overallScore,
       rendering,
       renderingLines,
@@ -202,7 +202,7 @@ export default function ReportCard({ data }: Props) {
         ],
       },
       snapshot: {
-        hosting: detection.hosting || "Unknown",
+        hosting: detection.hosting || "Undetected",
         jsFileCount: scripts.length,
         htmlSizeKb,
         performanceScore,

@@ -19,5 +19,5 @@ export const detectFramework = (
     return { name: "Angular", score: 20 };
   }
 
-  return { name: "Unknown", score: 0 };
+  return { name: "Unclassified", score: 0 };
 };

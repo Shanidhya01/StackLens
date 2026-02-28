@@ -18,7 +18,12 @@ export interface Signals {
     hasVercelEdge: boolean;
     hasCloudflare: boolean;
     hasCloudflareCDN: boolean;
+    hasNetlify: boolean;
+    hasCloudFront: boolean;
+    hasFastly: boolean;
+    hasAkamai: boolean;
     hasGithubServer: boolean;
+    serverFingerprint: string;
   };
   performanceSignals: {
     usesGzip: boolean;
@@ -44,6 +49,7 @@ export const extractSignals = (
   const cacheHeader = (headers["cf-cache-status"] || "").toLowerCase();
   const viaHeader = (headers["via"] || "").toLowerCase();
   const vercelCache = (headers["x-vercel-cache"] || "").toLowerCase();
+  const servedBy = (headers["x-served-by"] || "").toLowerCase();
   const encoding = (headers["content-encoding"] || "").toLowerCase();
   const runtimeHints = runtimeAnalysis?.dynamicFrameworkHints || [];
   const hydrationPatterns = runtimeAnalysis?.hydrationPatterns || [];
@@ -85,7 +91,23 @@ export const extractSignals = (
         !!headers["cf-cache-status"] ||
         cacheHeader.includes("hit") ||
         serverHeader.includes("cloudflare"),
+      hasNetlify:
+        !!headers["x-nf-request-id"] ||
+        serverHeader.includes("netlify"),
+      hasCloudFront:
+        !!headers["x-amz-cf-id"] ||
+        !!headers["x-amz-cf-pop"] ||
+        viaHeader.includes("cloudfront"),
+      hasFastly:
+        servedBy.includes("fastly") ||
+        !!headers["x-fastly-request-id"] ||
+        !!headers["x-cache-hits"],
+      hasAkamai:
+        !!headers["x-akamai-transformed"] ||
+        !!headers["akamai-origin-hop"] ||
+        serverHeader.includes("akamai"),
       hasGithubServer: serverHeader.includes("github"),
+      serverFingerprint: serverHeader || "",
     },
 
     performanceSignals: {

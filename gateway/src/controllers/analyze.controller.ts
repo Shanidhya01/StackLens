@@ -46,7 +46,7 @@ const toClientErrorMessage = (statusCode: number, value: unknown, serviceName?: 
   const text =
     typeof value === "string"
       ? value
-      : (value as any)?.message || (value as any)?.error || "Unknown upstream error";
+      : (value as any)?.message || (value as any)?.error || "Upstream error";
 
   if (typeof text === "string" && isHtmlPayload(text)) {
     if (statusCode === 502 || statusCode === 503 || statusCode === 504) {
@@ -55,7 +55,7 @@ const toClientErrorMessage = (statusCode: number, value: unknown, serviceName?: 
     return `${serviceName || "Upstream service"} returned an invalid HTML error response.`;
   }
 
-  return typeof text === "string" ? text.slice(0, 300) : "Unknown upstream error";
+  return typeof text === "string" ? text.slice(0, 300) : "Upstream error";
 };
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));

@@ -15,8 +15,12 @@ export const detectFromSignals = (signals: Signals) => {
     "Vercel Edge": 0,
     "Cloudflare CDN": 0,
     Cloudflare: 0,
+    Netlify: 0,
+    "AWS CloudFront": 0,
+    Fastly: 0,
+    Akamai: 0,
     "GitHub Infrastructure": 0,
-    Unknown: 1,
+    Undetected: 1,
   };
 
   if (signals.frameworkSignals.hasNextData) frameworkScores["Next.js"] += 42;
@@ -41,6 +45,10 @@ export const detectFromSignals = (signals: Signals) => {
   if (signals.infraSignals.hasVercelEdge) hostingScores["Vercel Edge"] += 28;
   if (signals.infraSignals.hasCloudflareCDN) hostingScores["Cloudflare CDN"] += 35;
   if (signals.infraSignals.hasCloudflare) hostingScores.Cloudflare += 30;
+  if (signals.infraSignals.hasNetlify) hostingScores.Netlify += 40;
+  if (signals.infraSignals.hasCloudFront) hostingScores["AWS CloudFront"] += 35;
+  if (signals.infraSignals.hasFastly) hostingScores.Fastly += 34;
+  if (signals.infraSignals.hasAkamai) hostingScores.Akamai += 34;
   if (signals.infraSignals.hasGithubServer) hostingScores["GitHub Infrastructure"] += 25;
 
   const frameworkCandidates = Object.entries(frameworkScores)
@@ -58,8 +66,11 @@ export const detectFromSignals = (signals: Signals) => {
   const topFramework = frameworkCandidates[0];
   const topHosting = hostingCandidates[0];
 
-  const framework = topFramework?.name ?? "Unknown";
-  const hosting = topHosting?.name ?? "Unknown";
+  const framework = topFramework?.name ?? "Static/Unclassified";
+  const hosting =
+    topHosting?.name && topHosting.name !== "Undetected"
+      ? topHosting.name
+      : (signals.infraSignals.serverFingerprint ? "Generic Web Server" : "Undetected");
 
   const hasHydration = signals.frameworkSignals.hasHydration;
   const rendering = hasHydration
@@ -81,6 +92,10 @@ export const detectFromSignals = (signals: Signals) => {
     signals.frameworkSignals.hasShopify ? "Shopify" : "",
     signals.infraSignals.hasCloudflareCDN ? "Cloudflare CDN" : "",
     signals.infraSignals.hasVercelEdge ? "Vercel Edge" : "",
+    signals.infraSignals.hasNetlify ? "Netlify" : "",
+    signals.infraSignals.hasCloudFront ? "AWS CloudFront" : "",
+    signals.infraSignals.hasFastly ? "Fastly" : "",
+    signals.infraSignals.hasAkamai ? "Akamai" : "",
   ].filter(Boolean);
 
   return {

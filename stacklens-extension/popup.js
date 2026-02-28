@@ -238,8 +238,8 @@ const normalizeScanResult = (data, pageUrl) => {
 
   return {
     url: pageUrl,
-    framework: detection.framework || detection.frameworkName || "Unknown",
-    hosting: detection.hosting || detection.hostingProvider || "Unknown",
+    framework: detection.framework || detection.frameworkName || "Unclassified",
+    hosting: detection.hosting || detection.hostingProvider || "Undetected",
     score: report.overallScore ?? report.score ?? "N/A",
     detection,
     report,
@@ -252,7 +252,7 @@ const normalizeScanResult = (data, pageUrl) => {
     renderingConclusion:
       String(detection.rendering || "").toLowerCase().includes("csr")
         ? "Likely Client-Side Rendering"
-        : String(detection.rendering || "Unknown rendering mode"),
+        : String(detection.rendering || "Rendering pattern unavailable"),
     renderingConfidence,
     infraSignals: {
       serverHeader,
