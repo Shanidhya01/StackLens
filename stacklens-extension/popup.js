@@ -117,6 +117,11 @@ const normalizeScanResult = (data, pageUrl) => {
   const frameworkCandidates = toArray(detection?.frameworkCandidates);
   const hostingCandidates = toArray(detection?.hostingCandidates);
   const detectedTechnologies = toArray(detection?.detectedTechnologies);
+  const scanStatus = String(data?.scanStatus || detection?.scanState || "").toLowerCase();
+  const isBlockedScan = scanStatus === "blocked" || [403, 429].includes(Number(crawl?.statusCode || 0));
+  const blockedReason =
+    String(data?.blockReason || detection?.classificationReason || "").trim() ||
+    "Target website blocked automated scanning requests.";
   const pageHost = getHost(pageUrl);
 
   const absoluteAssets = [...scripts, ...links].filter((entry) => /^https?:\/\//i.test(entry));
@@ -236,23 +241,42 @@ const normalizeScanResult = (data, pageUrl) => {
     uiPatterns?.isSPA ? "SPA" : "MPA"
   ];
 
+  const finalFramework =
+    isBlockedScan
+      ? "Blocked (Insufficient Evidence)"
+      : (detection.framework || detection.frameworkName || "Unclassified");
+  const finalHosting =
+    isBlockedScan
+      ? "Access restricted by target"
+      : (detection.hosting || detection.hostingProvider || "Undetected");
+  const finalScore = isBlockedScan ? "Blocked" : (report.overallScore ?? report.score ?? "N/A");
+  const finalBadges = isBlockedScan
+    ? [
+      "Blocked",
+      Number(crawl?.statusCode || 0) === 429 ? "Rate Limited" : "Forbidden",
+      "Insufficient Evidence"
+    ]
+    : badges;
+
   return {
     url: pageUrl,
-    framework: detection.framework || detection.frameworkName || "Unclassified",
-    hosting: detection.hosting || detection.hostingProvider || "Undetected",
-    score: report.overallScore ?? report.score ?? "N/A",
+    framework: finalFramework,
+    hosting: finalHosting,
+    score: finalScore,
     detection,
     report,
     performance,
     crawl,
     uiPatterns,
     runtimeAnalysis,
-    badges,
+    badges: finalBadges,
     renderingReasonLines,
     renderingConclusion:
-      String(detection.rendering || "").toLowerCase().includes("csr")
-        ? "Likely Client-Side Rendering"
-        : String(detection.rendering || "Rendering pattern unavailable"),
+      isBlockedScan
+        ? "Rendering could not be classified because scan access was blocked"
+        : (String(detection.rendering || "").toLowerCase().includes("csr")
+          ? "Likely Client-Side Rendering"
+          : String(detection.rendering || "Rendering pattern unavailable")),
     renderingConfidence,
     infraSignals: {
       serverHeader,
@@ -276,7 +300,7 @@ const normalizeScanResult = (data, pageUrl) => {
       rendering: renderingConfidence,
       performance: performanceScore,
     },
-    riskIndicators,
+    riskIndicators: isBlockedScan ? [blockedReason] : riskIndicators,
     technologies: categorizedTechnologies,
     whyConclusion: {
       reactLabel: reactDetected ? "React evidence:" : "React evidence (weak):",
@@ -292,7 +316,9 @@ const normalizeScanResult = (data, pageUrl) => {
           : "No __NEXT_DATA__ / next-hydration marker found"
       ]
     },
-    externalDomains
+    externalDomains,
+    isBlockedScan,
+    blockedReason
   };
 };
 

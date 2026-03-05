@@ -58,6 +58,100 @@ const toClientErrorMessage = (statusCode: number, value: unknown, serviceName?: 
   return typeof text === "string" ? text.slice(0, 300) : "Upstream error";
 };
 
+const toBlockedScanResponse = (url: string, statusCode: number, reason: string) => ({
+  scanStatus: "blocked",
+  blockReason: reason,
+  report: {
+    summary: "Target website blocked automated scanning requests.",
+    architectureGrade: "Insufficient Evidence",
+    performanceGrade: "Not Available",
+    overallScore: 0,
+    metrics: {
+      performance: 0,
+      seo: 0,
+      accessibility: 0,
+      bestPractices: 0,
+      renderTimingMs: {
+        domContentLoaded: 0,
+        load: 0,
+        firstContentfulPaint: 0,
+      },
+    },
+    stackInsights: {
+      frameworkCandidates: [],
+      hostingCandidates: [],
+      detectedTechnologies: [],
+    },
+  },
+  raw: {
+    crawl: {
+      statusCode,
+      finalUrl: url,
+      headers: {},
+      scripts: [],
+      meta: [],
+      links: [],
+      htmlSize: 0,
+      crawlDurationMs: 0,
+    },
+    detection: {
+      framework: "Blocked",
+      hosting: "Access restricted",
+      rendering: "Insufficient evidence",
+      confidence: 0,
+      frameworkCandidates: [],
+      hostingCandidates: [],
+      detectedTechnologies: [],
+      scanState: "blocked",
+      classificationReason: reason,
+    },
+    performance: {
+      payloadCategory: "Unknown",
+      compressionEnabled: false,
+      thirdPartyRisk: "Unknown",
+      performanceScore: 0,
+      lighthouse: {
+        performance: 0,
+        seo: 0,
+        accessibility: 0,
+        bestPractices: 0,
+      },
+      renderTimingMs: {
+        domContentLoaded: 0,
+        load: 0,
+        firstContentfulPaint: 0,
+      },
+    },
+    uiPatterns: {
+      hasNavbar: false,
+      hasFooter: false,
+      hasHeroSection: false,
+      formCount: 0,
+      buttonCount: 0,
+      isSPA: false,
+    },
+    runtimeAnalysis: {
+      executedJavaScript: false,
+      dynamicFrameworkHints: [],
+      hydrationPatterns: [],
+      domMutationCount: 0,
+      staticDomNodes: 0,
+      runtimeDomNodes: 0,
+      renderTimingMs: {
+        domContentLoaded: 0,
+        load: 0,
+        firstContentfulPaint: 0,
+      },
+    },
+    lighthouse: {
+      performance: 0,
+      seo: 0,
+      accessibility: 0,
+      bestPractices: 0,
+    },
+  },
+});
+
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const isTransientFailure = (error: any) => {
@@ -111,6 +205,7 @@ const callService = async (
   const normalizedDetails = toClientErrorMessage(statusCode, downstreamDetails, serviceWithHost);
   const wrappedError: any = new Error(normalizedDetails);
   wrappedError.statusCode = statusCode;
+  wrappedError.upstreamPayload = lastError?.response?.data;
   throw wrappedError;
 };
 
@@ -207,6 +302,10 @@ export const analyzeHandler = async (req: any, res: any) => {
   } catch (error: any) {
     const statusCode = error?.statusCode || 500;
     const normalizedDetails = error?.message || "Analysis failed due to an upstream service error.";
+
+    if (statusCode === 403 || statusCode === 429) {
+      return res.status(200).json(toBlockedScanResponse(normalizedUrl, statusCode, normalizedDetails));
+    }
 
     return res.status(statusCode).json({
       error: "Analysis failed",
