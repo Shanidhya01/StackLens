@@ -252,7 +252,14 @@ const fetchHtmlWithTlsFallback = async (url: string) => {
       console.info(
         `Axios blocked (${error?.response?.status}) for ${url}, retrying with Puppeteer…`
       );
-      return fetchWithPuppeteerFallback(url);
+      try {
+        return await fetchWithPuppeteerFallback(url);
+      } catch (puppeteerError: any) {
+        console.warn(
+          `Puppeteer fallback failed for blocked response on ${url}: ${puppeteerError?.message || puppeteerError}`
+        );
+        throw error;
+      }
     }
 
     if (!isTlsCertificateError(error)) {
@@ -269,7 +276,14 @@ const fetchHtmlWithTlsFallback = async (url: string) => {
         console.info(
           `Axios TLS-fallback blocked (${tlsRetryError?.response?.status}) for ${url}, retrying with Puppeteer…`
         );
-        return fetchWithPuppeteerFallback(url);
+        try {
+          return await fetchWithPuppeteerFallback(url);
+        } catch (puppeteerError: any) {
+          console.warn(
+            `Puppeteer fallback failed after TLS retry on ${url}: ${puppeteerError?.message || puppeteerError}`
+          );
+          throw tlsRetryError;
+        }
       }
       throw tlsRetryError;
     }
