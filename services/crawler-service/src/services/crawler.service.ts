@@ -1,6 +1,7 @@
 import axios from "axios";
 import puppeteer from "puppeteer";
 import https from "https";
+import { existsSync } from "fs";
 import { parseHTML } from "../parsers/html.parser";
 import { extractUIPatterns } from "../parsers/uiPattern.parser";
 
@@ -64,6 +65,91 @@ const BROWSER_HEADERS: Record<string, string> = {
   "Sec-Fetch-Site": "none",
   "Sec-Fetch-User": "?1",
   "Upgrade-Insecure-Requests": "1",
+};
+
+const CHROME_LAUNCH_ARGS = [
+  "--no-sandbox",
+  "--disable-setuid-sandbox",
+  "--disable-dev-shm-usage",
+  "--ignore-certificate-errors",
+];
+
+const findFirstExistingPath = (paths: Array<string | undefined>): string | undefined => {
+  for (const candidate of paths) {
+    if (!candidate) {
+      continue;
+    }
+
+    if (existsSync(candidate)) {
+      return candidate;
+    }
+  }
+
+  return undefined;
+};
+
+const resolveChromeExecutablePath = (): string | undefined => {
+  const envChromePath = process.env.CHROME_PATH || process.env.PUPPETEER_EXECUTABLE_PATH;
+  if (envChromePath && existsSync(envChromePath)) {
+    return envChromePath;
+  }
+
+  try {
+    const puppeteerPath = puppeteer.executablePath();
+    if (puppeteerPath && existsSync(puppeteerPath)) {
+      return puppeteerPath;
+    }
+  } catch {
+    // Ignore and fallback to common system paths.
+  }
+
+  const commonPaths =
+    process.platform === "win32"
+      ? [
+          process.env.PROGRAMFILES
+            ? `${process.env.PROGRAMFILES}\\Google\\Chrome\\Application\\chrome.exe`
+            : undefined,
+          process.env["PROGRAMFILES(X86)"]
+            ? `${process.env["PROGRAMFILES(X86)"]}\\Google\\Chrome\\Application\\chrome.exe`
+            : undefined,
+          process.env.LOCALAPPDATA
+            ? `${process.env.LOCALAPPDATA}\\Google\\Chrome\\Application\\chrome.exe`
+            : undefined,
+          process.env.PROGRAMFILES
+            ? `${process.env.PROGRAMFILES}\\Chromium\\Application\\chrome.exe`
+            : undefined,
+        ]
+      : process.platform === "darwin"
+        ? [
+            "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+            "/Applications/Chromium.app/Contents/MacOS/Chromium",
+          ]
+        : [
+            "/usr/bin/google-chrome-stable",
+            "/usr/bin/google-chrome",
+            "/usr/bin/chromium-browser",
+            "/usr/bin/chromium",
+            "/opt/google/chrome/chrome",
+          ];
+
+  return findFirstExistingPath(commonPaths);
+};
+
+const launchBrowser = async () => {
+  const executablePath = resolveChromeExecutablePath();
+
+  try {
+    return await puppeteer.launch({
+      headless: true,
+      args: CHROME_LAUNCH_ARGS,
+      ...(executablePath ? { executablePath } : {}),
+    });
+  } catch (error: any) {
+    const details = String(error?.message || error || "Unknown launch error");
+    throw new Error(
+      `Unable to start Chrome for Puppeteer. Set CHROME_PATH to a valid binary or run 'npm run install:chrome' in services/crawler-service. Original error: ${details}`
+    );
+  }
 };
 
 const isBlockedError = (error: any) => {
@@ -130,15 +216,7 @@ const buildUrlCandidates = (rawUrl: string): string[] => {
 const fetchWithPuppeteerFallback = async (
   url: string
 ): Promise<{ data: string; status: number; headers: Record<string, string> }> => {
-  const browser = await puppeteer.launch({
-    headless: true,
-    args: [
-      "--no-sandbox",
-      "--disable-setuid-sandbox",
-      "--disable-dev-shm-usage",
-      "--ignore-certificate-errors",
-    ],
-  });
+  const browser = await launchBrowser();
 
   try {
     const page = await browser.newPage();
@@ -199,10 +277,7 @@ const fetchHtmlWithTlsFallback = async (url: string) => {
 };
 
 const runRuntimeAnalysis = async (url: string, staticHtml: string): Promise<RuntimeAnalysis> => {
-  const browser = await puppeteer.launch({
-    headless: true,
-    args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage", "--ignore-certificate-errors"]
-  });
+  const browser = await launchBrowser();
 
   try {
     const page = await browser.newPage();
@@ -281,11 +356,17 @@ const runLighthouseAudit = async (url: string): Promise<LighthouseScores> => {
   const lighthouse = lighthouseModule.default || lighthouseModule;
   const chromeLauncherModule = await importEsmModule("chrome-launcher");
   const launch = chromeLauncherModule.launch;
-  const resolvedChromePath = process.env.CHROME_PATH || puppeteer.executablePath();
+  const resolvedChromePath = resolveChromeExecutablePath();
+
+  if (!resolvedChromePath) {
+    throw new Error(
+      "Unable to resolve Chrome path for Lighthouse. Set CHROME_PATH or run 'npm run install:chrome' in services/crawler-service."
+    );
+  }
 
   const chrome = await launch({
     chromePath: resolvedChromePath,
-    chromeFlags: ["--headless", "--no-sandbox", "--disable-dev-shm-usage", "--ignore-certificate-errors"]
+    chromeFlags: ["--headless", ...CHROME_LAUNCH_ARGS]
   });
 
   try {

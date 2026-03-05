@@ -39,6 +39,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 COPY package*.json ./
 RUN npm ci
+RUN npm run install:chrome
 
 COPY . .
 RUN npm run build
